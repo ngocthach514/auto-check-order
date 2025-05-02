@@ -33,25 +33,17 @@ const logger = winston.createLogger({
 
 // Cấu hình từ biến môi trường
 const CONFIG = {
-  SIMILARITY_THRESHOLD: parseFloat(process.env.SIMILARITY_THRESHOLD || "0.8"),
-  KEYWORD_MATCH_THRESHOLD: parseFloat(
-    process.env.KEYWORD_MATCH_THRESHOLD || "0.7"
-  ),
-  EXACT_MATCH_THRESHOLD: parseFloat(
-    process.env.EXACT_MATCH_THRESHOLD || "0.95"
-  ),
-  GROUP_SIMILARITY_THRESHOLD: parseFloat(
-    process.env.GROUP_SIMILARITY_THRESHOLD || "0.8"
-  ),
+  SIMILARITY_THRESHOLD: parseFloat(process.env.SIMILARITY_THRESHOLD || "0.85"),
+  KEYWORD_MATCH_THRESHOLD: parseFloat(process.env.KEYWORD_MATCH_THRESHOLD || "0.9"),
+  EXACT_MATCH_THRESHOLD: parseFloat(process.env.EXACT_MATCH_THRESHOLD || "0.95"),
+  GROUP_SIMILARITY_THRESHOLD: parseFloat(process.env.GROUP_SIMILARITY_THRESHOLD || "0.8"),
   BATCH_LIMIT: parseInt(process.env.BATCH_LIMIT || "10000"),
   API_RETRIES: parseInt(process.env.API_RETRIES || "3"),
   QUEUE_CONCURRENCY: parseInt(process.env.QUEUE_CONCURRENCY || "10"),
-  MAX_CONVERSATION_IDS_PER_BATCH: parseInt(
-    process.env.MAX_CONVERSATION_IDS_PER_BATCH || "20"
-  ),
+  MAX_CONVERSATION_IDS_PER_BATCH: parseInt(process.env.MAX_CONVERSATION_IDS_PER_BATCH || "20"),
   MAX_TOKEN_PER_BATCH: parseInt(process.env.MAX_TOKEN_PER_BATCH || "50000"),
   MAX_CACHE_SIZE: parseInt(process.env.MAX_CACHE_SIZE || "10000"),
-  CACHE_TTL: parseInt(process.env.CACHE_TTL || "604800"), // 7 ngày (7 * 24 * 60 * 60)
+  CACHE_TTL: parseInt(process.env.CACHE_TTL || "604800"), // 7 ngày
 };
 
 // Thư mục lưu file JSON
@@ -82,9 +74,7 @@ async function loadCache() {
     for (const [key, value] of Object.entries(diskCache)) {
       memoryCache.set(key, value);
     }
-    logger.info(
-      `Đã tải cache từ file, số mục: ${Object.keys(diskCache).length}`
-    );
+    logger.info(`Đã tải cache từ file, số mục: ${Object.keys(diskCache).length}`);
   } catch (error) {
     diskCache = {};
     logger.info("Không tìm thấy cache, khởi tạo mới");
@@ -98,7 +88,7 @@ async function saveCache() {
       const sortedKeys = Object.keys(diskCache).sort((a, b) => {
         const accessA = cacheAccessCount.get(a) || 0;
         const accessB = cacheAccessCount.get(b) || 0;
-        return accessB - accessA; // Sắp xếp theo tần suất truy cập giảm dần
+        return accessB - accessA;
       });
       const keysToDelete = sortedKeys.slice(CONFIG.MAX_CACHE_SIZE / 2);
       for (const key of keysToDelete) {
@@ -181,96 +171,39 @@ function hashGroup(group) {
   return crypto.createHash("md5").update(items.toLowerCase()).digest("hex");
 }
 
-// Trích xuất từ khóa (phiên bản cải tiến cho công nghệ)
+// Trích xuất từ khóa
 function extractKeyWords(item) {
-  // Danh sách từ thông dụng (stop words) cho công nghệ
   const commonWords = [
-    "and",
-    "for",
-    "with",
-    "bit",
-    "dvd",
-    "oei",
-    "dsp",
-    "intl",
-    "the",
-    "in",
-    "on",
-    "at",
-    "to",
-    "of",
-    "a",
-    "an",
-    "is",
-    "are",
-    "version",
-    "edition",
-    "pack",
-    "license",
-    "software",
-    "hardware",
-    "eng",
-    "english",
-    "intl",
-    "international",
-    "pkg",
-    "package",
-    "oem",
-    "retail",
-    "single",
-    "multi",
-    "user",
-    "device",
-    "gen",
-    "generation",
-    "core",
-    "series",
-    "model",
+    "and", "for", "with", "bit", "dvd", "oei", "dsp", "intl",
+    "the", "in", "on", "at", "to", "of", "a", "an", "is", "are",
+    "version", "edition", "pack", "license", "software", "hardware",
+    "eng", "english", "intl", "international", "pkg", "package",
+    "oem", "retail", "single", "multi", "user", "device",
+    "gen", "generation", "core", "series", "model",
+    "l3110", "l3150", "mg2470", "mg2570", "ip2870", "ip2872", "ip2870s",
+    "keyboard", "mouse", "graphics"
   ];
-
-  // Từ khóa ưu tiên cao (trọng số lớn hơn)
   const highPriorityWords = [
-    "windows",
-    "pro",
-    "home",
-    "enterprise",
-    "hp",
-    "dell",
-    "lenovo",
-    "asus",
-    "intel",
-    "amd",
-    "core",
-    "ryzen",
-    "i3",
-    "i5",
-    "i7",
-    "i9",
-    "mfp",
-    "laserjet",
-    "officejet",
-    "deskjet",
-    "printer",
-    "optiplex",
-    "latitude",
-    "inspiron",
-    "xps",
-    "alienware",
+    "windows", "pro", "home", "enterprise", "hp", "dell", "lenovo", "asus",
+    "intel", "amd", "core", "ryzen", "i3", "i5", "i7", "i9",
+    "mfp", "laserjet", "officejet", "deskjet", "printer",
+    "optiplex", "latitude", "inspiron", "xps", "alienware",
+    "epson", "canon", "kingmax", "ram", "ssd", "cpu", "monitor",
+    "laptop", "desktop",
+    "black", "red", "magenta", "color", "ink", "cartridge",
+    "c13t00v100", "c13t00v300", "pg-745", "cl746",
+    "3450", "5450", "f6v27aa", "f6v26aa"
   ];
-
-  // Giữ lại chữ, số, khoảng trắng, dấu gạch ngang và dấu chấm
-  const cleanedItem = item.toLowerCase().replace(/[^a-z0-9\s.-]/g, "");
-
-  // Tách chuỗi và lọc từ khóa
+  const cleanedItem = item
+    .toLowerCase()
+    .replace(/[^a-z0-9\s.-]/g, "");
   const words = cleanedItem
     .split(/\s+/)
-    .filter((word) => word.length > 1 && !commonWords.includes(word))
-    .map((word) => ({
+    .filter(word => word.length > 1 && !commonWords.includes(word))
+    .map(word => ({
       text: word.trim(),
-      weight: highPriorityWords.includes(word) ? 2 : 1,
+      weight: highPriorityWords.includes(word) ? 2 : 1
     }));
-
-  // Loại bỏ từ khóa trùng lặp, ưu tiên trọng số cao hơn
   const uniqueWords = [];
   const seenWords = new Set();
   for (const word of words) {
@@ -279,7 +212,6 @@ function extractKeyWords(item) {
       seenWords.add(word.text);
     }
   }
-
   return uniqueWords;
 }
 
@@ -289,22 +221,32 @@ function isSimilar(item1, item2, exactMatch = false) {
     item1.toLowerCase(),
     item2.toLowerCase()
   );
-  if (exactMatch && simScore > CONFIG.EXACT_MATCH_THRESHOLD) return true;
+  if (exactMatch && simScore >= CONFIG.EXACT_MATCH_THRESHOLD) {
+    logger.debug(`Exact match: "${item1}" vs "${item2}", simScore: ${simScore.toFixed(3)}`);
+    return true;
+  }
 
   const keywords1 = extractKeyWords(item1);
   const keywords2 = extractKeyWords(item2);
-  const commonKeywords = keywords1.filter((kw) => keywords2.includes(kw));
-  const keywordMatchRatio =
-    commonKeywords.length / Math.max(keywords1.length, keywords2.length, 1);
+  let totalWeight1 = 0, totalWeight2 = 0, commonWeight = 0;
+  const commonKeywords = keywords1.filter(kw1 => {
+    totalWeight1 += kw1.weight;
+    if (keywords2.some(kw2 => kw2.text === kw1.text)) {
+      commonWeight += kw1.weight;
+      return true;
+    }
+    return false;
+  });
+  keywords2.forEach(kw2 => totalWeight2 += kw2.weight);
 
-  const dynamicThreshold = Math.min(
-    CONFIG.SIMILARITY_THRESHOLD,
-    0.9 - 0.1 * (item1.length / 50)
+  const keywordMatchRatio = commonWeight / Math.max(totalWeight1, totalWeight2, 1);
+  const dynamicThreshold = exactMatch ? CONFIG.EXACT_MATCH_THRESHOLD : CONFIG.SIMILARITY_THRESHOLD;
+  logger.debug(
+    `So sánh: "${item1}" vs "${item2}", simScore: ${simScore.toFixed(3)}, keywordMatchRatio: ${keywordMatchRatio.toFixed(3)}, dynamicThreshold: ${dynamicThreshold}, exactMatch: ${exactMatch}`
   );
   return (
-    simScore > dynamicThreshold ||
-    (keywordMatchRatio > CONFIG.KEYWORD_MATCH_THRESHOLD &&
-      simScore > dynamicThreshold * 0.8)
+    simScore >= dynamicThreshold &&
+    keywordMatchRatio >= CONFIG.KEYWORD_MATCH_THRESHOLD
   );
 }
 
@@ -318,6 +260,12 @@ function isGroupSimilar(newItems, cachedItems) {
   return similarityRatio > CONFIG.GROUP_SIMILARITY_THRESHOLD;
 }
 
+// Đánh giá độ đầy đủ của Item
+function getItemDetailScore(item) {
+  const keywords = extractKeyWords(item);
+  return keywords.reduce((score, kw) => score + kw.weight, 0);
+}
+
 // Nhóm các Item tương đồng
 function groupSimilarItems(orders) {
   const groups = [];
@@ -327,37 +275,69 @@ function groupSimilarItems(orders) {
     const group = [orders[i]];
     visited.add(i);
     for (let j = i + 1; j < orders.length; j++) {
-      if (!visited.has(j) && isSimilar(orders[i].item, orders[j].item)) {
+      if (!visited.has(j) && isSimilar(orders[i].item, orders[j].item, false)) {
         group.push(orders[j]);
         visited.add(j);
       }
     }
     groups.push(group);
   }
+  logger.debug(`Nhóm cho orders: ${JSON.stringify(groups.map(g => g.map(o => o.item)))}`);
   return groups;
 }
 
 // Xử lý trùng lặp cục bộ
 function processLocalDuplicates(groups) {
-  return groups.map((group) => {
-    if (group.length <= 1) return group;
+  return groups.map((group, groupIndex) => {
+    if (group.length <= 1) {
+      logger.debug(`Nhóm ${groupIndex + 1} chỉ có 1 item, giữ nguyên: ${group[0].item}`);
+      return group;
+    }
+
     const uniqueItems = [];
-    const seenHashes = new Set();
+    const seenProducts = new Map(); // Lưu sản phẩm theo mã hash và chọn bản đầy đủ nhất
+
     for (const order of group) {
       const itemHash = hashItem(order.item);
-      if (
-        isSimilar(order.item, group[0].item, true) ||
-        seenHashes.has(itemHash)
-      ) {
-        if (!seenHashes.has(itemHash)) {
-          uniqueItems.push(order);
-          seenHashes.add(itemHash);
-        }
-      } else {
+      const isSimilarToFirst = isSimilar(order.item, group[0].item, true);
+      const hasDifferentModel = group.some(otherOrder => {
+        if (otherOrder.id === order.id) return false;
+        const model1 = extractKeyWords(order.item).find(kw => /\d{3,}/.test(kw.text) || /[a-z0-9]{6,}/.test(kw.text));
+        const model2 = extractKeyWords(otherOrder.item).find(kw => /\d{3,}/.test(kw.text) || /[a-z0-9]{6,}/.test(kw.text));
+        return model1 && model2 && model1.text !== model2.text;
+      });
+
+      if (!isSimilarToFirst || hasDifferentModel) {
         uniqueItems.push(order);
-        seenHashes.add(itemHash);
+        logger.info(
+          `Giữ Item: "${order.item}" (ID: ${order.id}), lý do: không tương đồng (isSimilarToFirst: ${isSimilarToFirst}, hasDifferentModel: ${hasDifferentModel})`
+        );
+      } else {
+        // Sản phẩm trùng lặp, chọn bản đầy đủ nhất
+        const detailScore = getItemDetailScore(order.item);
+        if (!seenProducts.has(itemHash) || detailScore > seenProducts.get(itemHash).detailScore) {
+          seenProducts.set(itemHash, { order, detailScore });
+          logger.info(
+            `Cập nhật Item: "${order.item}" (ID: ${order.id}), lý do: mô tả đầy đủ hơn (score: ${detailScore})`
+          );
+        } else {
+          logger.info(
+            `Xóa Item: "${order.item}" (ID: ${order.id}), lý do: trùng lặp, mô tả kém đầy đủ (score: ${detailScore})`
+          );
+        }
       }
     }
+
+    // Thêm các bản ghi đầy đủ nhất từ seenProducts vào uniqueItems
+    for (const { order } of seenProducts.values()) {
+      uniqueItems.push(order);
+    }
+
+    if (uniqueItems.length === 0) {
+      logger.warn(`Nhóm ${groupIndex + 1} không giữ được item nào, giữ tất cả: ${group.map(o => o.item).join(", ")}`);
+      return group; // Giữ tất cả nếu không có item nào được chọn
+    }
+
     return uniqueItems;
   });
 }
@@ -384,45 +364,45 @@ function formatOrdersStringForBatch(batch) {
 
 // Gọi API OpenAI
 async function callOpenAIApi(batchConversationIds, ordersString) {
-  const systemMessage = `- Bạn là một AI chuyên phân tích và xử lý từ ngữ trong lĩnh vực công nghệ và đồ điện tử.
-- Các sản phẩm được đề cập liên quan đến phần mềm, phần cứng và các thiết bị điện tử đa dụng. Hãy tập trung vào việc so sánh các từ khóa chính, mẫu mã sản phẩm, phiên bản, ngôn ngữ, và các đặc điểm kỹ thuật để đưa ra nhận định chính xác nhất.
+  const systemMessage = `- Bạn là một AI chuyên phân tích và xử lý từ ngữ trong lĩnh vực công nghệ và đồ điện tử, bao gồm phần mềm, phần cứng, thiết bị điện tử, linh kiện, và vật tư (như mực in).
+- Các sản phẩm có thể được mô tả bằng tiếng Việt, tiếng Anh, hoặc hỗn hợp cả hai. Hãy xử lý chính xác các từ khóa trong cả hai ngôn ngữ.
 
 **NHIỆM VỤ**
 - Phân tích các chuỗi ký tự trong trường "Item" của các bản ghi dưới đây để xác định xem chúng có **CÙNG LÀ MỘT SẢN PHẨM HAY KHÔNG**.
+- Đối với các sản phẩm không trùng lặp (có mã model hoặc đặc điểm kỹ thuật khác nhau), giữ tất cả các bản ghi.
+- Đối với các sản phẩm trùng lặp (cùng một sản phẩm nhưng mô tả khác nhau), chỉ giữ bản ghi có mô tả đầy đủ nhất (dựa trên số từ khóa hoặc độ dài chuỗi).
 
 **HƯỚNG DẪN PHÂN TÍCH**
-- Xác định từ khóa chính: Tìm các từ khóa liên quan đến sản phẩm.
-- Phân loại các từ khóa theo: Tên sản phẩm, phiên bản, định dạng phân phối, và các tiêu chí đánh giá thông tin sản phẩm khác.
-- So Sánh Các Đặc Điểm: So sánh tên sản phẩm chính.
-Kiểm tra xem các đặc điểm bổ sung (ngôn ngữ, định dạng, mã sản phẩm) có tương thích hay chỉ ra sự khác biệt.
-Xác định xem các thuật ngữ có ám chỉ cùng một loại sản phẩm hay các biến thể khác nhau.
+1. **Xác định từ khóa chính**:
+   - Tìm các từ khóa liên quan đến: tên thương hiệu (như Dell, HP, Epson), dòng sản phẩm (như Latitude, OptiPlex), mã model (như 3450, 5450, C13T00V300, F6V27AA), loại sản phẩm (như laptop, mực in, RAM), và đặc điểm kỹ thuật (như CPU, RAM, màu sắc).
+   - Ưu tiên mã model và loại sản phẩm khi so sánh. Mã model khác nhau (như 3450 vs. 5450, F6V27AA vs. F6V26AA) luôn được coi là sản phẩm khác nhau.
+2. **Phân loại từ khóa**:
+   - Phân loại theo: thương hiệu, dòng sản phẩm, mã model, phiên bản (như Pro, Home), định dạng phân phối (như OEM, retail), ngôn ngữ (như Eng, Intl), và đặc điểm bổ sung (như màu sắc, dung lượng).
+3. **So sánh đặc điểm**:
+   - So sánh tên sản phẩm chính và mã model trước tiên. Nếu mã model khác nhau, coi là sản phẩm khác nhau.
+   - Kiểm tra đặc điểm bổ sung (như màu sắc, loại mực in, CPU) để xác định biến thể.
+   - Xác định xem các thuật ngữ có ám chỉ cùng sản phẩm hay các biến thể khác nhau (như mực đen vs. mực màu).
+4. **Xử lý sản phẩm trùng lặp**:
+   - Nếu các sản phẩm được xác định là trùng lặp (cùng mã model và đặc điểm kỹ thuật), giữ bản ghi có số từ khóa nhiều nhất hoặc chuỗi mô tả dài nhất.
+5. **Xử lý ngôn ngữ hỗn hợp**:
+   - Nhận diện các từ khóa tiếng Việt (như "mực đỏ", "đen") và ánh xạ sang tiếng Anh (như "red", "black") để so sánh chính xác.
 
 **VÍ DỤ CỤ THỨC**
-- Đối với các sản phẩm Dell OptiPlex:
-  - "7020MT" là Mini Tower, trong khi "7020 SFF" là Small Form Factor, đây là hai form factor khác nhau.
-  - CPU như "Core i3-12100" và "Core i3-14100" là các thế hệ khác nhau với hiệu suất khác nhau.
-  - Hệ điều hành như "Ubuntu" và "Windows 11 Home" là khác nhau.
-
-**KẾT LUẬN MONG MUỐN**
-Dựa trên sự tương đồng hoặc khác biệt của các từ khóa và đặc điểm, đưa ra nhận định liệu các "Item" này có cùng chỉ một sản phẩm hay không.
-
-**LƯU Ý QUAN TRỌNG**
-- Hãy xử lí rồi trả kết quả là chuỗi JSON như dữ liệu đầu ra mong muốn phía dưới, không cần giải thích phân tích hoặc kết luận.
-- Trả về danh sách các sản phẩm không trùng lặp, giữ lại sản phẩm có mô tả đầy đủ nhất cho mỗi nhóm trùng lặp.
-
-**CẤU TRÚC DỮ LIỆU ĐẦU VÀO**
-C:<conversation_id>
-G:<group_number>:
-ID: <id>, Conversation ID: <conversation_id>, Item: <item>
-...
+**Đầu vào:**
+C:2729
+G:1:
+ID: 1001, Conversation ID: 2729, Item: Dell Latitude 3450
+ID: 1002, Conversation ID: 2729, Item: Dell Latitude 5450
 --
-G:<group_number>:
-...
+G:2:
+ID: 1003, Conversation ID: 2729, Item: MỰC ĐỎ SEN EPSON C13T00V300 (L3110/3150)
+ID: 1004, Conversation ID: 2729, Item: MỰC ĐEN EPSON C13T00V100 (L3110/3150)
 ==
-C:<conversation_id>
-...
-
-Ví dụ:
+C:4066
+G:1:
+ID: 2001, Conversation ID: 4066, Item: Mực in HP F6V27AA (680)
+ID: 2002, Conversation ID: 4066, Item: Mực in HP F6V26AA (680)
+==
 C:4085
 G:1:
 ID: 22305, Conversation ID: 4085, Item: Win Pro 11 64Bit Eng Intl 1pk DSP OEI DVD (FQC-10528)
@@ -430,15 +410,66 @@ ID: 22306, Conversation ID: 4085, Item: DG7GMGF0L4TL Windows fos - Windows 11 Pr
 ID: 22307, Conversation ID: 4085, Item: Windows 11 Pro - Legalization Get Genuine
 --
 G:2:
-ID: 22308, Conversation ID: 4085, Item: MÁY IN HP PRO MFP 4103FDN ( 2Z628A )
+ID: 22308, Conversation ID: 4085, Item: MÁY IN HP PRO MFP 4103FDN (2Z628A)
 ID: 22309, Conversation ID: 4085, Item: Printer
-==
-C:4086
-G:1:
-ID: 22310, Conversation ID: 4086, Item: Dell OptiPlex 7020MT
 
-**DỮ LIỆU ĐẦU RA MONG MUỐN**
+**Đầu ra mong muốn:**
 [
+  {
+    "conversation_id": 2729,
+    "groups": [
+      {
+        "group": 1,
+        "uniqueItems": [
+          {
+            "ID": 1001,
+            "Conversation ID": 2729,
+            "Item": "Dell Latitude 3450"
+          },
+          {
+            "ID": 1002,
+            "Conversation ID": 2729,
+            "Item": "Dell Latitude 5450"
+          }
+        ]
+      },
+      {
+        "group": 2,
+        "uniqueItems": [
+          {
+            "ID": 1003,
+            "Conversation ID": 2729,
+            "Item": "MỰC ĐỎ SEN EPSON C13T00V300 (L3110/3150)"
+          },
+          {
+            "ID": 1004,
+            "Conversation ID": 2729,
+            "Item": "MỰC ĐEN EPSON C13T00V100 (L3110/3150)"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "conversation_id": 4066,
+    "groups": [
+      {
+        "group": 1,
+        "uniqueItems": [
+          {
+            "ID": 2001,
+            "Conversation ID": 4066,
+            "Item": "Mực in HP F6V27AA (680)"
+          },
+          {
+            "ID": 2002,
+            "Conversation ID": 4066,
+            "Item": "Mực in HP F6V26AA (680)"
+          }
+        ]
+      }
+    ]
+  },
   {
     "conversation_id": 4085,
     "groups": [
@@ -449,11 +480,6 @@ ID: 22310, Conversation ID: 4086, Item: Dell OptiPlex 7020MT
             "ID": 22305,
             "Conversation ID": 4085,
             "Item": "Win Pro 11 64Bit Eng Intl 1pk DSP OEI DVD (FQC-10528)"
-          },
-          {
-            "ID": 22306,
-            "Conversation ID": 4085,
-            "Item": "DG7GMGF0L4TL Windows GGWA - Windows 11 Pro - Legalization Get Genuine"
           }
         ]
       },
@@ -463,28 +489,24 @@ ID: 22310, Conversation ID: 4086, Item: Dell OptiPlex 7020MT
           {
             "ID": 22308,
             "Conversation ID": 4085,
-            "Item": "MÁY IN HP PRO MFP 4103FDN ( 2Z628A )"
-          }
-        ]
-      }
-    ]
-  },
-  {
-    "conversation_id": 4086,
-    "groups": [
-      {
-        "group": 1,
-        "uniqueItems": [
-          {
-            "ID": 22310,
-            "Conversation ID": 4086,
-            "Item": "Dell OptiPlex 7020MT"
+            "Item": "MÁY IN HP PRO MFP 4103FDN (2Z628A)"
           }
         ]
       }
     ]
   }
-]`;
+]
+
+**KẾT LUẬN MONG MUỐN**
+- Giữ tất cả các sản phẩm không trùng lặp (có mã model hoặc đặc điểm kỹ thuật khác nhau, như 3450 vs. 5450, F6V27AA vs. F6V26AA).
+- Đối với sản phẩm trùng lặp (như Windows 11 Pro với các mô tả khác nhau), giữ bản ghi có mô tả đầy đủ nhất (như bản có mã FQC-10528).
+- Trả về danh sách các sản phẩm không trùng lặp, đảm bảo không có bản ghi nào bị bỏ sót.
+
+**LƯU Ý QUAN TRỌNG**
+- Trả kết quả dưới dạng chuỗi JSON hợp lệ, đúng cấu trúc như dữ liệu đầu ra mong muốn.
+- Không trả về giải thích hay phân tích, chỉ trả JSON.
+- Nếu không chắc chắn, giữ tất cả các bản ghi để tránh xóa nhầm.
+- Đảm bảo danh sách uniqueItems không rỗng và chứa tất cả sản phẩm không trùng lặp hoặc bản ghi đầy đủ nhất cho sản phẩm trùng lặp.`;
 
   try {
     const tokenCount = estimateTokens(systemMessage + ordersString);
@@ -536,23 +558,35 @@ ID: 22310, Conversation ID: 4086, Item: Dell OptiPlex 7020MT
 
 // Xác thực JSON
 function validateJsonStructure(json) {
-  if (!Array.isArray(json)) return false;
-  return json.every(
-    (conv) =>
+  if (!Array.isArray(json)) {
+    logger.error("JSON không phải mảng");
+    return false;
+  }
+  return json.every((conv, idx) => {
+    const validConv =
       typeof conv.conversation_id === "number" &&
-      Array.isArray(conv.groups) &&
-      conv.groups.every(
-        (group) =>
-          typeof group.group === "number" &&
-          Array.isArray(group.uniqueItems) &&
-          group.uniqueItems.every(
-            (item) =>
-              typeof item.ID === "number" &&
-              typeof item["Conversation ID"] === "number" &&
-              typeof item.Item === "string"
-          )
-      )
-  );
+      Array.isArray(conv.groups);
+    if (!validConv) {
+      logger.error(`Conversation ${idx} không hợp lệ: ${JSON.stringify(conv)}`);
+      return false;
+    }
+    return conv.groups.every((group, gIdx) => {
+      const validGroup =
+        typeof group.group === "number" &&
+        Array.isArray(group.uniqueItems) &&
+        group.uniqueItems.length > 0 &&
+        group.uniqueItems.every(
+          (item) =>
+            typeof item.ID === "number" &&
+            typeof item["Conversation ID"] === "number" &&
+            typeof item.Item === "string"
+        );
+      if (!validGroup) {
+        logger.error(`Nhóm ${gIdx} trong conversation ${conv.conversation_id} không hợp lệ: ${JSON.stringify(group)}`);
+      }
+      return validGroup;
+    });
+  });
 }
 
 // Phân tích JSON
@@ -563,39 +597,23 @@ async function parseJsonSafely(
   groupCacheHits
 ) {
   try {
-    const parsed = JSON.parse(content);
-    if (!validateJsonStructure(parsed)) {
+    let parsed;
+    try {
+      parsed = JSON.parse(content);
+    } catch (jsonError) {
+      logger.error(
+        `Lỗi phân tích JSON: ${batchConversationIds.join(", ")}: ${
+          jsonError.message
+        }`
+      );
+      throw jsonError;
+    }
+
+    if (!Array.isArray(parsed) || !validateJsonStructure(parsed)) {
       logger.warn(
         `JSON không đúng định dạng: ${batchConversationIds.join(", ")}`
       );
-      const fallbackResult = Object.entries(batch).map(
-        ([conversationId, groups]) => ({
-          conversation_id: parseInt(conversationId),
-          groups: groups.map((group, index) => ({
-            group: index + 1,
-            uniqueItems: groupCacheHits[conversationId]?.[index] || group,
-          })),
-        })
-      );
-      fallbackResult.forEach((convResult) => {
-        const conversationId = convResult.conversation_id.toString();
-        convResult.groups.forEach((groupResult, index) => {
-          const group = batch[conversationId][index];
-          const groupKey = hashGroup(group);
-          diskCache[groupKey] = {
-            uniqueItems: groupResult.uniqueItems,
-            originalItems: group.map((o) => o.item),
-          };
-          memoryCache.set(groupKey, {
-            uniqueItems: groupResult.uniqueItems,
-            originalItems: group.map((o) => o.item),
-          });
-          logger.info(
-            `Lưu cache mặc định cho groupKey: ${groupKey}, conversation_id: ${conversationId}`
-          );
-        });
-      });
-      return fallbackResult;
+      throw new Error("JSON không phải mảng hoặc không đúng cấu trúc");
     }
 
     parsed.forEach((convResult) => {
@@ -708,6 +726,13 @@ async function fetchOrdersBatch(offset = 0, limit = CONFIG.BATCH_LIMIT) {
       }
     );
 
+    // Kiểm tra dữ liệu đầu vào
+    orders.forEach(order => {
+      if (!order.item || order.item.length < 5) {
+        logger.warn(`Item quá ngắn hoặc thiếu thông tin: ID ${order.id}, Item: "${order.item}"`);
+      }
+    });
+
     logger.info(`Lấy được ${orders.length} bản ghi`);
     if (orders.length === 0) {
       const totalRecords = await sequelize.query(
@@ -764,7 +789,7 @@ async function processConversationBatch(batch) {
         logger.info(
           `Cache hit cho groupKey: ${groupKey}, conversation_id: ${conversationId}, group: ${
             index + 1
-          }`
+          }, cachedItems: ${JSON.stringify(cachedResult.uniqueItems)}`
         );
         logger.info(
           `Nhóm trùng với lần chạy trước, không gọi API: conversation_id: ${conversationId}, group: ${
@@ -773,7 +798,6 @@ async function processConversationBatch(batch) {
         );
         groupCacheHits[conversationId][index] = cachedResult.uniqueItems;
       } else {
-        // Kiểm tra tương đồng nhóm
         const newItems = group.map((o) => o.item).sort();
         let foundSimilar = false;
         const cacheKeys = memoryCache.keys();
@@ -786,7 +810,7 @@ async function processConversationBatch(batch) {
             logger.info(
               `Cache hit cho nhóm tương đồng với key: ${key}, conversation_id: ${conversationId}, group: ${
                 index + 1
-              }`
+              }, cachedItems: ${JSON.stringify(cachedResult)}`
             );
             logger.info(
               `Nhóm tương đồng với lần chạy trước, không gọi API: conversation_id: ${conversationId}, group: ${
@@ -828,7 +852,7 @@ async function processConversationBatch(batch) {
       conversation_id: parseInt(conversationId),
       groups: groups.map((group, index) => ({
         group: index + 1,
-        uniqueItems: groupCacheHits[conversationId][index],
+        uniqueItems: groupCacheHits[conversationId][index] || group,
       })),
     }));
   }
@@ -849,7 +873,7 @@ async function processConversationBatch(batch) {
 
   try {
     const content = await callOpenAIApi(batchConversationIds, ordersString);
-    const result = parseJsonSafely(
+    const result = await parseJsonSafely(
       content,
       batchConversationIds,
       groupsToProcess,
@@ -890,7 +914,7 @@ async function processConversationBatch(batch) {
               Conversation_ID: conversationId,
               Group: groupResult.group,
               Item_Deleted: "Không có",
-              Item_Kept: keptOrder.Item,
+              Item_Kept: keptOrder.Item || "Không xác định",
             });
           }
         }
@@ -914,8 +938,9 @@ async function processConversationBatch(batch) {
               const order = batch[conversationId]
                 .flat()
                 .find((o) => o.item === row.Item_Deleted);
-              return order.id;
-            });
+              return order ? order.id : null;
+            })
+            .filter(id => id !== null);
 
           if (allIdsToDelete.length) {
             await Order.update(
@@ -980,7 +1005,7 @@ async function processConversationGroup(conversationId, orders) {
       logger.info(
         `Cache hit cho groupKey: ${groupKey}, conversation_id: ${conversationId}, group: ${
           index + 1
-        }`
+        }, cachedItems: ${JSON.stringify(cachedResult.uniqueItems)}`
       );
       logger.info(
         `Nhóm trùng với lần chạy trước, không gọi API: conversation_id: ${conversationId}, group: ${
@@ -1001,7 +1026,7 @@ async function processConversationGroup(conversationId, orders) {
           logger.info(
             `Cache hit cho nhóm tương đồng với key: ${key}, conversation_id: ${conversationId}, group: ${
               index + 1
-            }`
+            }, cachedItems: ${JSON.stringify(cachedResult)}`
           );
           logger.info(
             `Nhóm tương đồng với lần chạy trước, không gọi API: conversation_id: ${conversationId}, group: ${
@@ -1039,7 +1064,7 @@ async function processConversationGroup(conversationId, orders) {
         conversation_id: parseInt(conversationId),
         groups: groupsWithDuplicates.map((group, index) => ({
           group: index + 1,
-          uniqueItems: groupCacheHits[index],
+          uniqueItems: groupCacheHits[index] || group,
         })),
       },
     ];
@@ -1075,7 +1100,7 @@ async function processConversationGroup(conversationId, orders) {
               Conversation_ID: conversationId,
               Group: groupResult.group,
               Item_Deleted: "Không có",
-              Item_Kept: keptOrder.Item,
+              Item_Kept: keptOrder.Item || "Không xác định",
             });
           }
         }
@@ -1097,8 +1122,9 @@ async function processConversationGroup(conversationId, orders) {
             .filter((row) => row.Item_Deleted !== "Không có")
             .map((row) => {
               const order = orders.find((o) => o.item === row.Item_Deleted);
-              return order.id;
-            });
+              return order ? order.id : null;
+            })
+            .filter(id => id !== null);
 
           if (allIdsToDelete.length) {
             await Order.update(
@@ -1130,7 +1156,7 @@ async function processConversationGroup(conversationId, orders) {
 
   try {
     const content = await callOpenAIApi([conversationId], ordersString);
-    const result = parseJsonSafely(
+    const result = await parseJsonSafely(
       content,
       [conversationId],
       { [conversationId]: groupsToProcess },
@@ -1169,7 +1195,7 @@ async function processConversationGroup(conversationId, orders) {
               Conversation_ID: conversationId,
               Group: groupResult.group,
               Item_Deleted: "Không có",
-              Item_Kept: keptOrder.Item,
+              Item_Kept: keptOrder.Item || "Không xác định",
             });
           }
         }
@@ -1191,8 +1217,9 @@ async function processConversationGroup(conversationId, orders) {
             .filter((row) => row.Item_Deleted !== "Không có")
             .map((row) => {
               const order = orders.find((o) => o.item === row.Item_Deleted);
-              return order.id;
-            });
+              return order ? order.id : null;
+            })
+            .filter(id => id !== null);
 
           if (allIdsToDelete.length) {
             await Order.update(
@@ -1229,7 +1256,7 @@ async function main() {
   logger.info(`Chương trình bắt đầu`);
 
   try {
-    await ensureJsonLogDir(); // Tạo thư mục logs/json trước khi chạy
+    await ensureJsonLogDir();
     await loadCache();
     let offset = 0;
     let hasMore = true;

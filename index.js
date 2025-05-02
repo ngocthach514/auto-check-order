@@ -34,13 +34,21 @@ const logger = winston.createLogger({
 // Cấu hình từ biến môi trường
 const CONFIG = {
   SIMILARITY_THRESHOLD: parseFloat(process.env.SIMILARITY_THRESHOLD || "0.85"),
-  KEYWORD_MATCH_THRESHOLD: parseFloat(process.env.KEYWORD_MATCH_THRESHOLD || "0.9"),
-  EXACT_MATCH_THRESHOLD: parseFloat(process.env.EXACT_MATCH_THRESHOLD || "0.95"),
-  GROUP_SIMILARITY_THRESHOLD: parseFloat(process.env.GROUP_SIMILARITY_THRESHOLD || "0.8"),
+  KEYWORD_MATCH_THRESHOLD: parseFloat(
+    process.env.KEYWORD_MATCH_THRESHOLD || "0.9"
+  ),
+  EXACT_MATCH_THRESHOLD: parseFloat(
+    process.env.EXACT_MATCH_THRESHOLD || "0.95"
+  ),
+  GROUP_SIMILARITY_THRESHOLD: parseFloat(
+    process.env.GROUP_SIMILARITY_THRESHOLD || "0.8"
+  ),
   BATCH_LIMIT: parseInt(process.env.BATCH_LIMIT || "10000"),
   API_RETRIES: parseInt(process.env.API_RETRIES || "3"),
   QUEUE_CONCURRENCY: parseInt(process.env.QUEUE_CONCURRENCY || "10"),
-  MAX_CONVERSATION_IDS_PER_BATCH: parseInt(process.env.MAX_CONVERSATION_IDS_PER_BATCH || "20"),
+  MAX_CONVERSATION_IDS_PER_BATCH: parseInt(
+    process.env.MAX_CONVERSATION_IDS_PER_BATCH || "20"
+  ),
   MAX_TOKEN_PER_BATCH: parseInt(process.env.MAX_TOKEN_PER_BATCH || "50000"),
   MAX_CACHE_SIZE: parseInt(process.env.MAX_CACHE_SIZE || "10000"),
   CACHE_TTL: parseInt(process.env.CACHE_TTL || "604800"), // 7 ngày
@@ -74,7 +82,9 @@ async function loadCache() {
     for (const [key, value] of Object.entries(diskCache)) {
       memoryCache.set(key, value);
     }
-    logger.info(`Đã tải cache từ file, số mục: ${Object.keys(diskCache).length}`);
+    logger.info(
+      `Đã tải cache từ file, số mục: ${Object.keys(diskCache).length}`
+    );
   } catch (error) {
     diskCache = {};
     logger.info("Không tìm thấy cache, khởi tạo mới");
@@ -106,16 +116,21 @@ async function saveCache() {
 }
 
 // Khởi tạo Sequelize
-const sequelize = new Sequelize("nguyenkim-autozalo", "root", "", {
-  host: "localhost",
-  dialect: "mysql",
-  port: 3306,
-  logging: false,
-});
+const sequelize = new Sequelize(
+  process.env.DATABASE_NAME,
+  process.env.DATABASE_USERNAME,
+  process.env.DATABASE_PASSWORD,
+  {
+    host: process.env.DATABASE_HOST,
+    dialect: process.env.DATABASE_SERVER,
+    port: process.env.DATABASE_PORT,
+    logging: false,
+  }
+);
 
 // Định nghĩa model Order
 const Order = sequelize.define(
-  "orders",
+  process.env.DATABASE_TABLE,
   {
     id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
     conversation_id: DataTypes.INTEGER,
@@ -174,35 +189,116 @@ function hashGroup(group) {
 // Trích xuất từ khóa
 function extractKeyWords(item) {
   const commonWords = [
-    "and", "for", "with", "bit", "dvd", "oei", "dsp", "intl",
-    "the", "in", "on", "at", "to", "of", "a", "an", "is", "are",
-    "version", "edition", "pack", "license", "software", "hardware",
-    "eng", "english", "intl", "international", "pkg", "package",
-    "oem", "retail", "single", "multi", "user", "device",
-    "gen", "generation", "core", "series", "model",
-    "l3110", "l3150", "mg2470", "mg2570", "ip2870", "ip2872", "ip2870s",
-    "keyboard", "mouse", "graphics"
+    "and",
+    "for",
+    "with",
+    "bit",
+    "dvd",
+    "oei",
+    "dsp",
+    "intl",
+    "the",
+    "in",
+    "on",
+    "at",
+    "to",
+    "of",
+    "a",
+    "an",
+    "is",
+    "are",
+    "version",
+    "edition",
+    "pack",
+    "license",
+    "software",
+    "hardware",
+    "eng",
+    "english",
+    "intl",
+    "international",
+    "pkg",
+    "package",
+    "oem",
+    "retail",
+    "single",
+    "multi",
+    "user",
+    "device",
+    "gen",
+    "generation",
+    "core",
+    "series",
+    "model",
+    "l3110",
+    "l3150",
+    "mg2470",
+    "mg2570",
+    "ip2870",
+    "ip2872",
+    "ip2870s",
+    "keyboard",
+    "mouse",
+    "graphics",
   ];
   const highPriorityWords = [
-    "windows", "pro", "home", "enterprise", "hp", "dell", "lenovo", "asus",
-    "intel", "amd", "core", "ryzen", "i3", "i5", "i7", "i9",
-    "mfp", "laserjet", "officejet", "deskjet", "printer",
-    "optiplex", "latitude", "inspiron", "xps", "alienware",
-    "epson", "canon", "kingmax", "ram", "ssd", "cpu", "monitor",
-    "laptop", "desktop",
-    "black", "red", "magenta", "color", "ink", "cartridge",
-    "c13t00v100", "c13t00v300", "pg-745", "cl746",
-    "3450", "5450", "f6v27aa", "f6v26aa"
+    "windows",
+    "pro",
+    "home",
+    "enterprise",
+    "hp",
+    "dell",
+    "lenovo",
+    "asus",
+    "intel",
+    "amd",
+    "core",
+    "ryzen",
+    "i3",
+    "i5",
+    "i7",
+    "i9",
+    "mfp",
+    "laserjet",
+    "officejet",
+    "deskjet",
+    "printer",
+    "optiplex",
+    "latitude",
+    "inspiron",
+    "xps",
+    "alienware",
+    "epson",
+    "canon",
+    "kingmax",
+    "ram",
+    "ssd",
+    "cpu",
+    "monitor",
+    "laptop",
+    "desktop",
+    "black",
+    "red",
+    "magenta",
+    "color",
+    "ink",
+    "cartridge",
+    "c13t00v100",
+    "c13t00v300",
+    "pg-745",
+    "cl746",
+    "3450",
+    "5450",
+    "f6v27aa",
+    "f6v26aa",
   ];
-  const cleanedItem = item
-    .toLowerCase()
-    .replace(/[^a-z0-9\s.-]/g, "");
+  const cleanedItem = item.toLowerCase().replace(/[^a-z0-9\s.-]/g, "");
   const words = cleanedItem
     .split(/\s+/)
-    .filter(word => word.length > 1 && !commonWords.includes(word))
-    .map(word => ({
+    .filter((word) => word.length > 1 && !commonWords.includes(word))
+    .map((word) => ({
       text: word.trim(),
-      weight: highPriorityWords.includes(word) ? 2 : 1
+      weight: highPriorityWords.includes(word) ? 2 : 1,
     }));
   const uniqueWords = [];
   const seenWords = new Set();
@@ -217,32 +313,47 @@ function extractKeyWords(item) {
 
 // Kiểm tra độ tương đồng
 function isSimilar(item1, item2, exactMatch = false) {
+  if (!item1 || !item2) {
+    logger.warn(`Item không hợp lệ: item1=${item1}, item2=${item2}`);
+    return false;
+  }
   const simScore = stringSimilarity.compareTwoStrings(
     item1.toLowerCase(),
     item2.toLowerCase()
   );
   if (exactMatch && simScore >= CONFIG.EXACT_MATCH_THRESHOLD) {
-    logger.debug(`Exact match: "${item1}" vs "${item2}", simScore: ${simScore.toFixed(3)}`);
+    logger.debug(
+      `Exact match: "${item1}" vs "${item2}", simScore: ${simScore.toFixed(3)}`
+    );
     return true;
   }
 
   const keywords1 = extractKeyWords(item1);
   const keywords2 = extractKeyWords(item2);
-  let totalWeight1 = 0, totalWeight2 = 0, commonWeight = 0;
-  const commonKeywords = keywords1.filter(kw1 => {
+  let totalWeight1 = 0,
+    totalWeight2 = 0,
+    commonWeight = 0;
+  const commonKeywords = keywords1.filter((kw1) => {
     totalWeight1 += kw1.weight;
-    if (keywords2.some(kw2 => kw2.text === kw1.text)) {
+    if (keywords2.some((kw2) => kw2.text === kw1.text)) {
       commonWeight += kw1.weight;
       return true;
     }
     return false;
   });
-  keywords2.forEach(kw2 => totalWeight2 += kw2.weight);
+  keywords2.forEach((kw2) => (totalWeight2 += kw2.weight));
 
-  const keywordMatchRatio = commonWeight / Math.max(totalWeight1, totalWeight2, 1);
-  const dynamicThreshold = exactMatch ? CONFIG.EXACT_MATCH_THRESHOLD : CONFIG.SIMILARITY_THRESHOLD;
+  const keywordMatchRatio =
+    commonWeight / Math.max(totalWeight1, totalWeight2, 1);
+  const dynamicThreshold = exactMatch
+    ? CONFIG.EXACT_MATCH_THRESHOLD
+    : CONFIG.SIMILARITY_THRESHOLD;
   logger.debug(
-    `So sánh: "${item1}" vs "${item2}", simScore: ${simScore.toFixed(3)}, keywordMatchRatio: ${keywordMatchRatio.toFixed(3)}, dynamicThreshold: ${dynamicThreshold}, exactMatch: ${exactMatch}`
+    `So sánh: "${item1}" vs "${item2}", simScore: ${simScore.toFixed(
+      3
+    )}, keywordMatchRatio: ${keywordMatchRatio.toFixed(
+      3
+    )}, dynamicThreshold: ${dynamicThreshold}, exactMatch: ${exactMatch}`
   );
   return (
     simScore >= dynamicThreshold &&
@@ -282,7 +393,11 @@ function groupSimilarItems(orders) {
     }
     groups.push(group);
   }
-  logger.debug(`Nhóm cho orders: ${JSON.stringify(groups.map(g => g.map(o => o.item)))}`);
+  logger.debug(
+    `Nhóm cho orders: ${JSON.stringify(
+      groups.map((g) => g.map((o) => o.item))
+    )}`
+  );
   return groups;
 }
 
@@ -290,7 +405,9 @@ function groupSimilarItems(orders) {
 function processLocalDuplicates(groups) {
   return groups.map((group, groupIndex) => {
     if (group.length <= 1) {
-      logger.debug(`Nhóm ${groupIndex + 1} chỉ có 1 item, giữ nguyên: ${group[0].item}`);
+      logger.debug(
+        `Nhóm ${groupIndex + 1} chỉ có 1 item, giữ nguyên: ${group[0].item}`
+      );
       return group;
     }
 
@@ -300,10 +417,14 @@ function processLocalDuplicates(groups) {
     for (const order of group) {
       const itemHash = hashItem(order.item);
       const isSimilarToFirst = isSimilar(order.item, group[0].item, true);
-      const hasDifferentModel = group.some(otherOrder => {
+      const hasDifferentModel = group.some((otherOrder) => {
         if (otherOrder.id === order.id) return false;
-        const model1 = extractKeyWords(order.item).find(kw => /\d{3,}/.test(kw.text) || /[a-z0-9]{6,}/.test(kw.text));
-        const model2 = extractKeyWords(otherOrder.item).find(kw => /\d{3,}/.test(kw.text) || /[a-z0-9]{6,}/.test(kw.text));
+        const model1 = extractKeyWords(order.item).find(
+          (kw) => /\d{3,}/.test(kw.text) || /[a-z0-9]{6,}/.test(kw.text)
+        );
+        const model2 = extractKeyWords(otherOrder.item).find(
+          (kw) => /\d{3,}/.test(kw.text) || /[a-z0-9]{6,}/.test(kw.text)
+        );
         return model1 && model2 && model1.text !== model2.text;
       });
 
@@ -315,7 +436,10 @@ function processLocalDuplicates(groups) {
       } else {
         // Sản phẩm trùng lặp, chọn bản đầy đủ nhất
         const detailScore = getItemDetailScore(order.item);
-        if (!seenProducts.has(itemHash) || detailScore > seenProducts.get(itemHash).detailScore) {
+        if (
+          !seenProducts.has(itemHash) ||
+          detailScore > seenProducts.get(itemHash).detailScore
+        ) {
           seenProducts.set(itemHash, { order, detailScore });
           logger.info(
             `Cập nhật Item: "${order.item}" (ID: ${order.id}), lý do: mô tả đầy đủ hơn (score: ${detailScore})`
@@ -334,7 +458,11 @@ function processLocalDuplicates(groups) {
     }
 
     if (uniqueItems.length === 0) {
-      logger.warn(`Nhóm ${groupIndex + 1} không giữ được item nào, giữ tất cả: ${group.map(o => o.item).join(", ")}`);
+      logger.warn(
+        `Nhóm ${groupIndex + 1} không giữ được item nào, giữ tất cả: ${group
+          .map((o) => o.item)
+          .join(", ")}`
+      );
       return group; // Giữ tất cả nếu không có item nào được chọn
     }
 
@@ -344,6 +472,10 @@ function processLocalDuplicates(groups) {
 
 // Định dạng chuỗi cho batch
 function formatOrdersStringForBatch(batch) {
+  if (!batch || typeof batch !== "object") {
+    logger.error("Batch không hợp lệ");
+    return "";
+  }
   return Object.entries(batch)
     .map(([conversationId, groups]) => {
       const groupStrings = groups
@@ -364,6 +496,13 @@ function formatOrdersStringForBatch(batch) {
 
 // Gọi API OpenAI
 async function callOpenAIApi(batchConversationIds, ordersString) {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error("OPENAI_API_KEY không được định nghĩa trong .env");
+  }
+  if (!ordersString || !batchConversationIds) {
+    throw new Error("ordersString hoặc batchConversationIds không hợp lệ");
+  }
+
   const systemMessage = `- Bạn là một AI chuyên phân tích và xử lý từ ngữ trong lĩnh vực công nghệ và đồ điện tử, bao gồm phần mềm, phần cứng, thiết bị điện tử, linh kiện, và vật tư (như mực in).
 - Các sản phẩm có thể được mô tả bằng tiếng Việt, tiếng Anh, hoặc hỗn hợp cả hai. Hãy xử lý chính xác các từ khóa trong cả hai ngôn ngữ.
 
@@ -511,7 +650,9 @@ ID: 22309, Conversation ID: 4085, Item: Printer
   try {
     const tokenCount = estimateTokens(systemMessage + ordersString);
     logger.info(
-      `Gửi batch ${batchConversationIds.length} conversation_id, ước lượng ${tokenCount} token`
+      `Gửi batch ${batchConversationIds.join(
+        ", "
+      )} conversation_id, ước lượng ${tokenCount} token`
     );
 
     const response = await axios.post(
@@ -540,13 +681,17 @@ ID: 22309, Conversation ID: 4085, Item: Printer
         usage.total_tokens
       }, Tổng token đã tiêu hao: ${totalTokensUsed}`
     );
-    await fs.writeFile(
-      path.join(
-        JSON_LOG_DIR,
-        `debug_json_${batchConversationIds.join("_")}.json`
-      ),
-      content
-    );
+    try {
+      await fs.writeFile(
+        path.join(
+          JSON_LOG_DIR,
+          `debug_json_${batchConversationIds.join("_")}.json`
+        ),
+        content
+      );
+    } catch (writeError) {
+      logger.error(`Lỗi ghi file JSON: ${writeError.message}`);
+    }
     return content;
   } catch (error) {
     logger.error(
@@ -564,8 +709,7 @@ function validateJsonStructure(json) {
   }
   return json.every((conv, idx) => {
     const validConv =
-      typeof conv.conversation_id === "number" &&
-      Array.isArray(conv.groups);
+      typeof conv.conversation_id === "number" && Array.isArray(conv.groups);
     if (!validConv) {
       logger.error(`Conversation ${idx} không hợp lệ: ${JSON.stringify(conv)}`);
       return false;
@@ -582,7 +726,11 @@ function validateJsonStructure(json) {
             typeof item.Item === "string"
         );
       if (!validGroup) {
-        logger.error(`Nhóm ${gIdx} trong conversation ${conv.conversation_id} không hợp lệ: ${JSON.stringify(group)}`);
+        logger.error(
+          `Nhóm ${gIdx} trong conversation ${
+            conv.conversation_id
+          } không hợp lệ: ${JSON.stringify(group)}`
+        );
       }
       return validGroup;
     });
@@ -596,6 +744,10 @@ async function parseJsonSafely(
   batch,
   groupCacheHits
 ) {
+  if (!content || !batchConversationIds || !batch) {
+    logger.error("Tham số không hợp lệ trong parseJsonSafely");
+    return [];
+  }
   try {
     let parsed;
     try {
@@ -619,7 +771,16 @@ async function parseJsonSafely(
     parsed.forEach((convResult) => {
       const conversationId = convResult.conversation_id.toString();
       convResult.groups.forEach((groupResult, index) => {
-        const group = batch[conversationId][index];
+        const group =
+          batch[conversationId] && batch[conversationId][index]
+            ? batch[conversationId][index]
+            : null;
+        if (!group) {
+          logger.error(
+            `Nhóm không tồn tại cho conversation ${conversationId}, index ${index}`
+          );
+          return;
+        }
         const groupKey = hashGroup(group);
         diskCache[groupKey] = {
           uniqueItems: groupResult.uniqueItems,
@@ -640,13 +801,17 @@ async function parseJsonSafely(
     logger.error(
       `Lỗi phân tích JSON: ${batchConversationIds.join(", ")}: ${error.message}`
     );
-    await fs.writeFile(
-      path.join(
-        JSON_LOG_DIR,
-        `error_json_${batchConversationIds.join("_")}.json`
-      ),
-      content
-    );
+    try {
+      await fs.writeFile(
+        path.join(
+          JSON_LOG_DIR,
+          `error_json_${batchConversationIds.join("_")}.json`
+        ),
+        content
+      );
+    } catch (writeError) {
+      logger.error(`Lỗi ghi file JSON lỗi: ${writeError.message}`);
+    }
     const fallbackResult = Object.entries(batch).map(
       ([conversationId, groups]) => ({
         conversation_id: parseInt(conversationId),
@@ -659,7 +824,16 @@ async function parseJsonSafely(
     fallbackResult.forEach((convResult) => {
       const conversationId = convResult.conversation_id.toString();
       convResult.groups.forEach((groupResult, index) => {
-        const group = batch[conversationId][index];
+        const group =
+          batch[conversationId] && batch[conversationId][index]
+            ? batch[conversationId][index]
+            : null;
+        if (!group) {
+          logger.error(
+            `Nhóm không tồn tại trong fallback cho conversation ${conversationId}, index ${index}`
+          );
+          return;
+        }
         const groupKey = hashGroup(group);
         diskCache[groupKey] = {
           uniqueItems: groupResult.uniqueItems,
@@ -699,7 +873,7 @@ async function fetchOrdersBatch(offset = 0, limit = CONFIG.BATCH_LIMIT) {
         deleted_at, 
         created_at
       FROM 
-        orders
+        ${process.env.DATABASE_TABLE}
       WHERE 
         status = 'pending' 
         AND deleted_at IS NULL 
@@ -707,7 +881,7 @@ async function fetchOrdersBatch(offset = 0, limit = CONFIG.BATCH_LIMIT) {
         AND created_at <= :now
         AND conversation_id IN (
           SELECT conversation_id 
-          FROM orders 
+          FROM ${process.env.DATABASE_TABLE}
           WHERE 
             status = 'pending' 
             AND deleted_at IS NULL 
@@ -727,24 +901,26 @@ async function fetchOrdersBatch(offset = 0, limit = CONFIG.BATCH_LIMIT) {
     );
 
     // Kiểm tra dữ liệu đầu vào
-    orders.forEach(order => {
+    orders.forEach((order) => {
       if (!order.item || order.item.length < 5) {
-        logger.warn(`Item quá ngắn hoặc thiếu thông tin: ID ${order.id}, Item: "${order.item}"`);
+        logger.warn(
+          `Item quá ngắn hoặc thiếu thông tin: ID ${order.id}, Item: "${order.item}"`
+        );
       }
     });
 
     logger.info(`Lấy được ${orders.length} bản ghi`);
     if (orders.length === 0) {
       const totalRecords = await sequelize.query(
-        `SELECT COUNT(*) as count FROM orders`,
+        `SELECT COUNT(*) as count FROM ${process.env.DATABASE_TABLE}`,
         { type: Sequelize.QueryTypes.SELECT }
       );
       const pendingRecords = await sequelize.query(
-        `SELECT COUNT(*) as count FROM orders WHERE status = 'pending' AND deleted_at IS NULL`,
+        `SELECT COUNT(*) as count FROM ${process.env.DATABASE_TABLE} WHERE status = 'pending' AND deleted_at IS NULL`,
         { type: Sequelize.QueryTypes.SELECT }
       );
       const dateRangeRecords = await sequelize.query(
-        `SELECT COUNT(*) as count FROM orders WHERE created_at >= :threeDaysAgo AND created_at <= :now`,
+        `SELECT COUNT(*) as count FROM ${process.env.DATABASE_TABLE} WHERE created_at >= :threeDaysAgo AND created_at <= :now`,
         {
           replacements: { threeDaysAgo, now },
           type: Sequelize.QueryTypes.SELECT,
@@ -759,13 +935,17 @@ async function fetchOrdersBatch(offset = 0, limit = CONFIG.BATCH_LIMIT) {
     return orders;
   } catch (error) {
     logger.error(`Lỗi lấy dữ liệu: ${error.message}`);
-    return [];
+    throw error;
   }
 }
 
 // Xử lý batch
 async function processConversationBatch(batch) {
   const startTime = Date.now();
+  if (!batch || typeof batch !== "object") {
+    logger.error("Batch không hợp lệ");
+    return [];
+  }
   const batchConversationIds = Object.keys(batch);
   logger.info(`Bắt đầu batch ${batchConversationIds.join(", ")}`);
 
@@ -940,7 +1120,7 @@ async function processConversationBatch(batch) {
                 .find((o) => o.item === row.Item_Deleted);
               return order ? order.id : null;
             })
-            .filter(id => id !== null);
+            .filter((id) => id !== null);
 
           if (allIdsToDelete.length) {
             await Order.update(
@@ -983,6 +1163,12 @@ async function processConversationBatch(batch) {
 // Xử lý từng conversation_id
 async function processConversationGroup(conversationId, orders) {
   const startTime = Date.now();
+  if (!conversationId || !orders) {
+    logger.error(
+      `Tham số không hợp lệ trong processConversationGroup: conversationId=${conversationId}, orders=${orders}`
+    );
+    return;
+  }
   logger.info(`Bắt đầu Conversation ID: ${conversationId}`);
 
   const groups = processLocalDuplicates(groupSimilarItems(orders));
@@ -1124,7 +1310,7 @@ async function processConversationGroup(conversationId, orders) {
               const order = orders.find((o) => o.item === row.Item_Deleted);
               return order ? order.id : null;
             })
-            .filter(id => id !== null);
+            .filter((id) => id !== null);
 
           if (allIdsToDelete.length) {
             await Order.update(
@@ -1219,7 +1405,7 @@ async function processConversationGroup(conversationId, orders) {
               const order = orders.find((o) => o.item === row.Item_Deleted);
               return order ? order.id : null;
             })
-            .filter(id => id !== null);
+            .filter((id) => id !== null);
 
           if (allIdsToDelete.length) {
             await Order.update(
@@ -1256,6 +1442,10 @@ async function main() {
   logger.info(`Chương trình bắt đầu`);
 
   try {
+    // Kiểm tra kết nối database
+    await sequelize.authenticate();
+    logger.info("Kết nối database thành công");
+
     await ensureJsonLogDir();
     await loadCache();
     let offset = 0;

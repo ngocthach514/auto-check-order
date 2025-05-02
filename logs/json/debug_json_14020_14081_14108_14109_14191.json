@@ -1,0 +1,77 @@
+[
+  {
+    "conversation_id": 14020,
+    "groups": [
+      {
+        "group": 1,
+        "uniqueItems": [
+          {
+            "ID": 23862,
+            "Conversation ID": 14020,
+            "Item": "NB DELL INS14 5440 I5-1334U/ 16GD5/ 512SSD/ 14.0FHD+/ 16: 10/ FP/ 3C41W/ W11SL+OFFICE/ LED_KB/ PRES/ XANH"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "conversation_id": 14081,
+    "groups": [
+      {
+        "group": 1,
+        "uniqueItems": [
+          {
+            "ID": 24499,
+            "Conversation ID": 14081,
+            "Item": "MÁY TÍNH XÁCH TAY ASUS P1403CVA 14.0\" FHD IPS / I5-13420H / DDR5 16GB / 512GB / FINGERPRINT / CHICLET KEYBOARD / WI-FI 6 2*2 + BLUETOOTH 5.3 / 50WHRS, 3-CELL / WINDOWS 11 HOME"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "conversation_id": 14108,
+    "groups": [
+      {
+        "group": 1,
+        "uniqueItems": [
+          {
+            "ID": 24688,
+            "Conversation ID": 14108,
+            "Item": "Kaspersky Standard SEA 5-Dvc 1Y Bs RP( KL10414UEFS)"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "conversation_id": 14109,
+    "groups": [
+      {
+        "group": 1,
+        "uniqueItems": [
+          {
+            "ID": 24690,
+            "Conversation ID": 14109,
+            "Item": "Kaspersky Standard SEA 5-Dvc 1Y Bs RP( KL10414UEFS)"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "conversation_id": 14191,
+    "groups": [
+      {
+        "group": 1,
+        "uniqueItems": [
+          {
+            "ID": 25237,
+            "Conversation ID": 14191,
+            "Item": "MÁY IN PHUN EPSON L3210"
+          }
+        ]
+      }
+    ]
+  }
+]

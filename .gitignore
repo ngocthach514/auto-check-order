@@ -1,5 +1,4 @@
 node_modules/
 .env
-logs/
 app.log
 cache.json

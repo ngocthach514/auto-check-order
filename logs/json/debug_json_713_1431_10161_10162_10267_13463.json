@@ -1,0 +1,117 @@
+[
+  {
+    "conversation_id": 713,
+    "groups": [
+      {
+        "group": 1,
+        "uniqueItems": [
+          {
+            "ID": 23911,
+            "Conversation ID": 713,
+            "Item": "MỰC CF283A ( M125, M127FN, M225, M201 )"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "conversation_id": 1431,
+    "groups": [
+      {
+        "group": 1,
+        "uniqueItems": [
+          {
+            "ID": 24446,
+            "Conversation ID": 1431,
+            "Item": "NUC12WSHI3 NUC12 PRO Tall / i3-1220P /  2xDDR4-3200 / 2xNVMe, SATA/ 2x HDMI 2.1/2x DP 1.4a ,VESA MOUNT NO , TẶNG POWER CABLE"
+          },
+          {
+            "ID": 24448,
+            "Conversation ID": 1431,
+            "Item": "NUC12WSHI7 NUC12 PRO Tall / i7-1260P/ 2xDDR4-3200 / 2xNVMe, SATA/ 2x HDMI 2.1/2x DP 1.4a / VESA MOUNT NO , TẶNG POWER CABLE"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "conversation_id": 10161,
+    "groups": [
+      {
+        "group": 1,
+        "uniqueItems": [
+          {
+            "ID": 25139,
+            "Conversation ID": 10161,
+            "Item": "Ổ CỨNG MÁY VI TÍNH HIỆU WESTERN DIGITAL LOẠI WD4006FZBX, 4TB"
+          },
+          {
+            "ID": 25138,
+            "Conversation ID": 10161,
+            "Item": "Ổ CỨNG MÁY VI TÍNH HIỆU WESTERN DIGITAL LOẠI WD40EZAX, 4TB"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "conversation_id": 10162,
+    "groups": [
+      {
+        "group": 1,
+        "uniqueItems": [
+          {
+            "ID": 25141,
+            "Conversation ID": 10162,
+            "Item": "Ổ CỨNG MÁY VI TÍNH HIỆU WESTERN DIGITAL LOẠI WD4006FZBX, 4TB"
+          },
+          {
+            "ID": 25140,
+            "Conversation ID": 10162,
+            "Item": "Ổ CỨNG MÁY VI TÍNH HIỆU WESTERN DIGITAL LOẠI WD40EZAX, 4TB"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "conversation_id": 10267,
+    "groups": [
+      {
+        "group": 1,
+        "uniqueItems": [
+          {
+            "ID": 24108,
+            "Conversation ID": 10267,
+            "Item": "Máy tính để bàn HP Pro Tower 280 G9 PCI, Core i5-14500,8GB DDR5,512GB SSD,Intel Graphics,Wlan ax+BT,Keyboard,Mouse,Win 11 Home 64,01Year_AY1Y1PT"
+          },
+          {
+            "ID": 24109,
+            "Conversation ID": 10267,
+            "Item": "Máy tính để bàn HP Pro Tower 280 G9 PCI, Core i5-14500,16GB DDR5,512GB SSD,Intel Graphics,Wlan ax+BT,Keyboard,Mouse,Win 11 Home 64,01Year_AY1Y3PT"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "conversation_id": 13463,
+    "groups": [
+      {
+        "group": 1,
+        "uniqueItems": [
+          {
+            "ID": 24831,
+            "Conversation ID": 13463,
+            "Item": "Ổ CỨNG SSD SILICON (SOLID STATE DISK)M.2 2280 PCIE SSD,A60,512GB,STD"
+          },
+          {
+            "ID": 24830,
+            "Conversation ID": 13463,
+            "Item": "Ổ CỨNG SSD SILICON (SOLID STATE DISK)M.2 2280 PCIE SSD,A60,256GB,STD"
+          }
+        ]
+      }
+    ]
+  }
+]

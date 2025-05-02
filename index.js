@@ -20,7 +20,10 @@ const logger = winston.createLogger({
   level: "info",
   format: winston.format.combine(
     winston.format.timestamp(),
-    winston.format.printf(({ timestamp, level, message }) => `${timestamp} [${level.toUpperCase()}]: ${message}`)
+    winston.format.printf(
+      ({ timestamp, level, message }) =>
+        `${timestamp} [${level.toUpperCase()}]: ${message}`
+    )
   ),
   transports: [
     new winston.transports.Console(),
@@ -31,13 +34,21 @@ const logger = winston.createLogger({
 // Cấu hình từ biến môi trường
 const CONFIG = {
   SIMILARITY_THRESHOLD: parseFloat(process.env.SIMILARITY_THRESHOLD || "0.8"),
-  KEYWORD_MATCH_THRESHOLD: parseFloat(process.env.KEYWORD_MATCH_THRESHOLD || "0.7"),
-  EXACT_MATCH_THRESHOLD: parseFloat(process.env.EXACT_MATCH_THRESHOLD || "0.95"),
-  GROUP_SIMILARITY_THRESHOLD: parseFloat(process.env.GROUP_SIMILARITY_THRESHOLD || "0.8"),
+  KEYWORD_MATCH_THRESHOLD: parseFloat(
+    process.env.KEYWORD_MATCH_THRESHOLD || "0.7"
+  ),
+  EXACT_MATCH_THRESHOLD: parseFloat(
+    process.env.EXACT_MATCH_THRESHOLD || "0.95"
+  ),
+  GROUP_SIMILARITY_THRESHOLD: parseFloat(
+    process.env.GROUP_SIMILARITY_THRESHOLD || "0.8"
+  ),
   BATCH_LIMIT: parseInt(process.env.BATCH_LIMIT || "10000"),
   API_RETRIES: parseInt(process.env.API_RETRIES || "3"),
   QUEUE_CONCURRENCY: parseInt(process.env.QUEUE_CONCURRENCY || "10"),
-  MAX_CONVERSATION_IDS_PER_BATCH: parseInt(process.env.MAX_CONVERSATION_IDS_PER_BATCH || "20"),
+  MAX_CONVERSATION_IDS_PER_BATCH: parseInt(
+    process.env.MAX_CONVERSATION_IDS_PER_BATCH || "20"
+  ),
   MAX_TOKEN_PER_BATCH: parseInt(process.env.MAX_TOKEN_PER_BATCH || "50000"),
   MAX_CACHE_SIZE: parseInt(process.env.MAX_CACHE_SIZE || "10000"),
   CACHE_TTL: parseInt(process.env.CACHE_TTL || "604800"), // 7 ngày (7 * 24 * 60 * 60)
@@ -57,7 +68,10 @@ async function ensureJsonLogDir() {
 
 // Khởi tạo cache với TTL
 const CACHE_FILE = "cache.json";
-const memoryCache = new NodeCache({ stdTTL: CONFIG.CACHE_TTL, checkperiod: 3600 });
+const memoryCache = new NodeCache({
+  stdTTL: CONFIG.CACHE_TTL,
+  checkperiod: 3600,
+});
 let diskCache = {};
 const cacheAccessCount = new Map(); // Theo dõi tần suất truy cập cache
 
@@ -68,7 +82,9 @@ async function loadCache() {
     for (const [key, value] of Object.entries(diskCache)) {
       memoryCache.set(key, value);
     }
-    logger.info(`Đã tải cache từ file, số mục: ${Object.keys(diskCache).length}`);
+    logger.info(
+      `Đã tải cache từ file, số mục: ${Object.keys(diskCache).length}`
+    );
   } catch (error) {
     diskCache = {};
     logger.info("Không tìm thấy cache, khởi tạo mới");
@@ -108,14 +124,18 @@ const sequelize = new Sequelize("nguyenkim-autozalo", "root", "", {
 });
 
 // Định nghĩa model Order
-const Order = sequelize.define("orders", {
-  id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
-  conversation_id: DataTypes.INTEGER,
-  item: DataTypes.STRING,
-  status: DataTypes.STRING,
-  deleted_at: DataTypes.DATE,
-  created_at: DataTypes.DATE,
-}, { timestamps: false });
+const Order = sequelize.define(
+  "orders",
+  {
+    id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    conversation_id: DataTypes.INTEGER,
+    item: DataTypes.STRING,
+    status: DataTypes.STRING,
+    deleted_at: DataTypes.DATE,
+    created_at: DataTypes.DATE,
+  },
+  { timestamps: false }
+);
 
 // Cấu hình axios-retry
 axiosRetry(axios, {
@@ -125,17 +145,21 @@ axiosRetry(axios, {
     logger.warn(`Retry ${retryCount}: Chờ ${delay}ms...`);
     return delay;
   },
-  retryCondition: (error) => (
+  retryCondition: (error) =>
     axiosRetry.isNetworkOrIdempotentRequestError(error) ||
     (error.response && error.response.status === 429) ||
-    error.code === 'ECONNABORTED'
-  ),
+    error.code === "ECONNABORTED",
 });
 
 // Cấu hình hàng đợi
 const queues = Array.from(
   { length: 20 },
-  () => new PQueue({ concurrency: CONFIG.QUEUE_CONCURRENCY, interval: 500, intervalCap: 10 })
+  () =>
+    new PQueue({
+      concurrency: CONFIG.QUEUE_CONCURRENCY,
+      interval: 500,
+      intervalCap: 10,
+    })
 );
 
 // Ước lượng token
@@ -150,13 +174,25 @@ function hashItem(item) {
 
 // Tạo hash cho nhóm
 function hashGroup(group) {
-  const items = group.map((order) => order.item).sort().join("|");
+  const items = group
+    .map((order) => order.item)
+    .sort()
+    .join("|");
   return crypto.createHash("md5").update(items.toLowerCase()).digest("hex");
 }
 
 // Trích xuất từ khóa
 function extractKeyWords(item) {
-  const commonWords = ["and", "for", "with", "bit", "dvd", "oei", "dsp", "intl"];
+  const commonWords = [
+    "and",
+    "for",
+    "with",
+    "bit",
+    "dvd",
+    "oei",
+    "dsp",
+    "intl",
+  ];
   return item
     .toLowerCase()
     .replace(/[^a-z0-9\s]/g, "")
@@ -167,27 +203,36 @@ function extractKeyWords(item) {
 
 // Kiểm tra độ tương đồng
 function isSimilar(item1, item2, exactMatch = false) {
-  const simScore = stringSimilarity.compareTwoStrings(item1.toLowerCase(), item2.toLowerCase());
+  const simScore = stringSimilarity.compareTwoStrings(
+    item1.toLowerCase(),
+    item2.toLowerCase()
+  );
   if (exactMatch && simScore > CONFIG.EXACT_MATCH_THRESHOLD) return true;
 
   const keywords1 = extractKeyWords(item1);
   const keywords2 = extractKeyWords(item2);
   const commonKeywords = keywords1.filter((kw) => keywords2.includes(kw));
-  const keywordMatchRatio = commonKeywords.length / Math.max(keywords1.length, keywords2.length, 1);
+  const keywordMatchRatio =
+    commonKeywords.length / Math.max(keywords1.length, keywords2.length, 1);
 
-  const dynamicThreshold = Math.min(CONFIG.SIMILARITY_THRESHOLD, 0.9 - 0.1 * (item1.length / 50));
+  const dynamicThreshold = Math.min(
+    CONFIG.SIMILARITY_THRESHOLD,
+    0.9 - 0.1 * (item1.length / 50)
+  );
   return (
     simScore > dynamicThreshold ||
-    (keywordMatchRatio > CONFIG.KEYWORD_MATCH_THRESHOLD && simScore > dynamicThreshold * 0.8)
+    (keywordMatchRatio > CONFIG.KEYWORD_MATCH_THRESHOLD &&
+      simScore > dynamicThreshold * 0.8)
   );
 }
 
 // Kiểm tra tương đồng nhóm
 function isGroupSimilar(newItems, cachedItems) {
-  const matchedItems = newItems.filter(item1 =>
-    cachedItems.some(item2 => isSimilar(item1, item2, false))
+  const matchedItems = newItems.filter((item1) =>
+    cachedItems.some((item2) => isSimilar(item1, item2, false))
   );
-  const similarityRatio = matchedItems.length / Math.max(newItems.length, cachedItems.length);
+  const similarityRatio =
+    matchedItems.length / Math.max(newItems.length, cachedItems.length);
   return similarityRatio > CONFIG.GROUP_SIMILARITY_THRESHOLD;
 }
 
@@ -218,7 +263,10 @@ function processLocalDuplicates(groups) {
     const seenHashes = new Set();
     for (const order of group) {
       const itemHash = hashItem(order.item);
-      if (isSimilar(order.item, group[0].item, true) || seenHashes.has(itemHash)) {
+      if (
+        isSimilar(order.item, group[0].item, true) ||
+        seenHashes.has(itemHash)
+      ) {
         if (!seenHashes.has(itemHash)) {
           uniqueItems.push(order);
           seenHashes.add(itemHash);
@@ -239,7 +287,10 @@ function formatOrdersStringForBatch(batch) {
       const groupStrings = groups
         .map((group, index) => {
           const groupItems = group
-            .map((order) => `ID: ${order.id}, Conversation ID: ${order.conversation_id}, Item: ${order.item}`)
+            .map(
+              (order) =>
+                `ID: ${order.id}, Conversation ID: ${order.conversation_id}, Item: ${order.item}`
+            )
             .join("\n");
           return `G:${index + 1}:\n${groupItems}`;
         })
@@ -355,7 +406,9 @@ ID: 22310, Conversation ID: 4086, Item: Dell OptiPlex 7020MT
 
   try {
     const tokenCount = estimateTokens(systemMessage + ordersString);
-    logger.info(`Gửi batch ${batchConversationIds.length} conversation_id, ước lượng ${tokenCount} token`);
+    logger.info(
+      `Gửi batch ${batchConversationIds.length} conversation_id, ước lượng ${tokenCount} token`
+    );
 
     const response = await axios.post(
       "https://api.openai.com/v1/chat/completions",
@@ -378,11 +431,23 @@ ID: 22310, Conversation ID: 4086, Item: Dell OptiPlex 7020MT
     content = content.replace(/```json\n|\n```/g, "").trim();
     const usage = response.data.usage;
     totalTokensUsed += usage.total_tokens;
-    logger.info(`API OpenAI: ${batchConversationIds.join(", ")}, Token lần này: ${usage.total_tokens}, Tổng token đã tiêu hao: ${totalTokensUsed}`);
-    await fs.writeFile(path.join(JSON_LOG_DIR, `debug_json_${batchConversationIds.join("_")}.json`), content);
+    logger.info(
+      `API OpenAI: ${batchConversationIds.join(", ")}, Token lần này: ${
+        usage.total_tokens
+      }, Tổng token đã tiêu hao: ${totalTokensUsed}`
+    );
+    await fs.writeFile(
+      path.join(
+        JSON_LOG_DIR,
+        `debug_json_${batchConversationIds.join("_")}.json`
+      ),
+      content
+    );
     return content;
   } catch (error) {
-    logger.error(`Lỗi API OpenAI: ${batchConversationIds.join(", ")}: ${error.message}`);
+    logger.error(
+      `Lỗi API OpenAI: ${batchConversationIds.join(", ")}: ${error.message}`
+    );
     throw error;
   }
 }
@@ -409,18 +474,27 @@ function validateJsonStructure(json) {
 }
 
 // Phân tích JSON
-async function parseJsonSafely(content, batchConversationIds, batch, groupCacheHits) {
+async function parseJsonSafely(
+  content,
+  batchConversationIds,
+  batch,
+  groupCacheHits
+) {
   try {
     const parsed = JSON.parse(content);
     if (!validateJsonStructure(parsed)) {
-      logger.warn(`JSON không đúng định dạng: ${batchConversationIds.join(", ")}`);
-      const fallbackResult = Object.entries(batch).map(([conversationId, groups]) => ({
-        conversation_id: parseInt(conversationId),
-        groups: groups.map((group, index) => ({
-          group: index + 1,
-          uniqueItems: groupCacheHits[conversationId]?.[index] || group,
-        })),
-      }));
+      logger.warn(
+        `JSON không đúng định dạng: ${batchConversationIds.join(", ")}`
+      );
+      const fallbackResult = Object.entries(batch).map(
+        ([conversationId, groups]) => ({
+          conversation_id: parseInt(conversationId),
+          groups: groups.map((group, index) => ({
+            group: index + 1,
+            uniqueItems: groupCacheHits[conversationId]?.[index] || group,
+          })),
+        })
+      );
       fallbackResult.forEach((convResult) => {
         const conversationId = convResult.conversation_id.toString();
         convResult.groups.forEach((groupResult, index) => {
@@ -428,13 +502,15 @@ async function parseJsonSafely(content, batchConversationIds, batch, groupCacheH
           const groupKey = hashGroup(group);
           diskCache[groupKey] = {
             uniqueItems: groupResult.uniqueItems,
-            originalItems: group.map(o => o.item),
+            originalItems: group.map((o) => o.item),
           };
           memoryCache.set(groupKey, {
             uniqueItems: groupResult.uniqueItems,
-            originalItems: group.map(o => o.item),
+            originalItems: group.map((o) => o.item),
           });
-          logger.info(`Lưu cache mặc định cho groupKey: ${groupKey}, conversation_id: ${conversationId}`);
+          logger.info(
+            `Lưu cache mặc định cho groupKey: ${groupKey}, conversation_id: ${conversationId}`
+          );
         });
       });
       return fallbackResult;
@@ -447,27 +523,39 @@ async function parseJsonSafely(content, batchConversationIds, batch, groupCacheH
         const groupKey = hashGroup(group);
         diskCache[groupKey] = {
           uniqueItems: groupResult.uniqueItems,
-          originalItems: group.map(o => o.item),
+          originalItems: group.map((o) => o.item),
         };
         memoryCache.set(groupKey, {
           uniqueItems: groupResult.uniqueItems,
-          originalItems: group.map(o => o.item),
+          originalItems: group.map((o) => o.item),
         });
-        logger.info(`Lưu cache cho groupKey: ${groupKey}, conversation_id: ${conversationId}`);
+        logger.info(
+          `Lưu cache cho groupKey: ${groupKey}, conversation_id: ${conversationId}`
+        );
       });
     });
 
     return parsed;
   } catch (error) {
-    logger.error(`Lỗi phân tích JSON: ${batchConversationIds.join(", ")}: ${error.message}`);
-    await fs.writeFile(path.join(JSON_LOG_DIR, `error_json_${batchConversationIds.join("_")}.json`), content);
-    const fallbackResult = Object.entries(batch).map(([conversationId, groups]) => ({
-      conversation_id: parseInt(conversationId),
-      groups: groups.map((group, index) => ({
-        group: index + 1,
-        uniqueItems: groupCacheHits[conversationId]?.[index] || group,
-      })),
-    }));
+    logger.error(
+      `Lỗi phân tích JSON: ${batchConversationIds.join(", ")}: ${error.message}`
+    );
+    await fs.writeFile(
+      path.join(
+        JSON_LOG_DIR,
+        `error_json_${batchConversationIds.join("_")}.json`
+      ),
+      content
+    );
+    const fallbackResult = Object.entries(batch).map(
+      ([conversationId, groups]) => ({
+        conversation_id: parseInt(conversationId),
+        groups: groups.map((group, index) => ({
+          group: index + 1,
+          uniqueItems: groupCacheHits[conversationId]?.[index] || group,
+        })),
+      })
+    );
     fallbackResult.forEach((convResult) => {
       const conversationId = convResult.conversation_id.toString();
       convResult.groups.forEach((groupResult, index) => {
@@ -475,13 +563,15 @@ async function parseJsonSafely(content, batchConversationIds, batch, groupCacheH
         const groupKey = hashGroup(group);
         diskCache[groupKey] = {
           uniqueItems: groupResult.uniqueItems,
-          originalItems: group.map(o => o.item),
+          originalItems: group.map((o) => o.item),
         };
         memoryCache.set(groupKey, {
           uniqueItems: groupResult.uniqueItems,
-          originalItems: group.map(o => o.item),
+          originalItems: group.map((o) => o.item),
         });
-        logger.info(`Lưu cache mặc định cho groupKey: ${groupKey}, conversation_id: ${conversationId}`);
+        logger.info(
+          `Lưu cache mặc định cho groupKey: ${groupKey}, conversation_id: ${conversationId}`
+        );
       });
     });
     return fallbackResult;
@@ -548,11 +638,16 @@ async function fetchOrdersBatch(offset = 0, limit = CONFIG.BATCH_LIMIT) {
       );
       const dateRangeRecords = await sequelize.query(
         `SELECT COUNT(*) as count FROM orders WHERE created_at >= :threeDaysAgo AND created_at <= :now`,
-        { replacements: { threeDaysAgo, now }, type: Sequelize.QueryTypes.SELECT }
+        {
+          replacements: { threeDaysAgo, now },
+          type: Sequelize.QueryTypes.SELECT,
+        }
       );
       logger.info(`Tổng số bản ghi trong bảng: ${totalRecords[0].count}`);
       logger.info(`Số bản ghi pending và chưa xóa: ${pendingRecords[0].count}`);
-      logger.info(`Số bản ghi trong khoảng ${threeDaysAgo} đến ${now}: ${dateRangeRecords[0].count}`);
+      logger.info(
+        `Số bản ghi trong khoảng ${threeDaysAgo} đến ${now}: ${dateRangeRecords[0].count}`
+      );
     }
     return orders;
   } catch (error) {
@@ -577,16 +672,27 @@ async function processConversationBatch(batch) {
     groups.forEach((group, index) => {
       const groupKey = hashGroup(group);
       let cachedResult = memoryCache.get(groupKey);
-      const groupItems = group.map(o => o.item).join(", ");
+      const groupItems = group.map((o) => o.item).join(", ");
       if (cachedResult) {
         cacheHits++;
-        cacheAccessCount.set(groupKey, (cacheAccessCount.get(groupKey) || 0) + 1);
-        logger.info(`Cache hit cho groupKey: ${groupKey}, conversation_id: ${conversationId}, group: ${index + 1}`);
-        logger.info(`Nhóm trùng với lần chạy trước, không gọi API: conversation_id: ${conversationId}, group: ${index + 1}, Items: [${groupItems}]`);
+        cacheAccessCount.set(
+          groupKey,
+          (cacheAccessCount.get(groupKey) || 0) + 1
+        );
+        logger.info(
+          `Cache hit cho groupKey: ${groupKey}, conversation_id: ${conversationId}, group: ${
+            index + 1
+          }`
+        );
+        logger.info(
+          `Nhóm trùng với lần chạy trước, không gọi API: conversation_id: ${conversationId}, group: ${
+            index + 1
+          }, Items: [${groupItems}]`
+        );
         groupCacheHits[conversationId][index] = cachedResult.uniqueItems;
       } else {
         // Kiểm tra tương đồng nhóm
-        const newItems = group.map(o => o.item).sort();
+        const newItems = group.map((o) => o.item).sort();
         let foundSimilar = false;
         const cacheKeys = memoryCache.keys();
         for (const key of cacheKeys) {
@@ -595,8 +701,16 @@ async function processConversationBatch(batch) {
             cacheHits++;
             cacheAccessCount.set(key, (cacheAccessCount.get(key) || 0) + 1);
             cachedResult = value.uniqueItems;
-            logger.info(`Cache hit cho nhóm tương đồng với key: ${key}, conversation_id: ${conversationId}, group: ${index + 1}`);
-            logger.info(`Nhóm tương đồng với lần chạy trước, không gọi API: conversation_id: ${conversationId}, group: ${index + 1}, Items: [${groupItems}]`);
+            logger.info(
+              `Cache hit cho nhóm tương đồng với key: ${key}, conversation_id: ${conversationId}, group: ${
+                index + 1
+              }`
+            );
+            logger.info(
+              `Nhóm tương đồng với lần chạy trước, không gọi API: conversation_id: ${conversationId}, group: ${
+                index + 1
+              }, Items: [${groupItems}]`
+            );
             groupCacheHits[conversationId][index] = cachedResult;
             foundSimilar = true;
             break;
@@ -604,8 +718,16 @@ async function processConversationBatch(batch) {
         }
         if (!foundSimilar) {
           cacheMisses++;
-          logger.info(`Cache miss cho groupKey: ${groupKey}, conversation_id: ${conversationId}, group: ${index + 1}`);
-          logger.info(`Nhóm có dữ liệu mới, cần gọi API: conversation_id: ${conversationId}, group: ${index + 1}, Items: [${groupItems}]`);
+          logger.info(
+            `Cache miss cho groupKey: ${groupKey}, conversation_id: ${conversationId}, group: ${
+              index + 1
+            }`
+          );
+          logger.info(
+            `Nhóm có dữ liệu mới, cần gọi API: conversation_id: ${conversationId}, group: ${
+              index + 1
+            }, Items: [${groupItems}]`
+          );
           groupsToProcess[conversationId].push(group);
           allCached = false;
         }
@@ -617,7 +739,9 @@ async function processConversationBatch(batch) {
   }
 
   if (allCached) {
-    logger.info(`Sử dụng cache hoàn toàn cho batch ${batchConversationIds.join(", ")}`);
+    logger.info(
+      `Sử dụng cache hoàn toàn cho batch ${batchConversationIds.join(", ")}`
+    );
     return Object.entries(batch).map(([conversationId, groups]) => ({
       conversation_id: parseInt(conversationId),
       groups: groups.map((group, index) => ({
@@ -629,7 +753,9 @@ async function processConversationBatch(batch) {
 
   const ordersString = formatOrdersStringForBatch(groupsToProcess);
   if (!ordersString) {
-    logger.info(`Không có dữ liệu mới để xử lý: ${batchConversationIds.join(", ")}`);
+    logger.info(
+      `Không có dữ liệu mới để xử lý: ${batchConversationIds.join(", ")}`
+    );
     return Object.entries(batch).map(([conversationId, groups]) => ({
       conversation_id: parseInt(conversationId),
       groups: groups.map((group, index) => ({
@@ -641,7 +767,12 @@ async function processConversationBatch(batch) {
 
   try {
     const content = await callOpenAIApi(batchConversationIds, ordersString);
-    const result = parseJsonSafely(content, batchConversationIds, groupsToProcess, groupCacheHits);
+    const result = parseJsonSafely(
+      content,
+      batchConversationIds,
+      groupsToProcess,
+      groupCacheHits
+    );
 
     const transaction = await sequelize.transaction();
     try {
@@ -685,13 +816,22 @@ async function processConversationBatch(batch) {
         if (tableData.length) {
           logger.info(`\nKết quả cho Conversation ID: ${conversationId}`);
           logger.info("-".repeat(120));
-          console.table(tableData, ["Conversation_ID", "Group", "Item_Deleted", "Item_Kept"]);
-          logger.info(`Đã xóa ${totalDeleted} bản ghi trùng lặp cho Conversation ID: ${conversationId}`);
+          console.table(tableData, [
+            "Conversation_ID",
+            "Group",
+            "Item_Deleted",
+            "Item_Kept",
+          ]);
+          logger.info(
+            `Đã xóa ${totalDeleted} bản ghi trùng lặp cho Conversation ID: ${conversationId}`
+          );
 
           const allIdsToDelete = tableData
             .filter((row) => row.Item_Deleted !== "Không có")
             .map((row) => {
-              const order = batch[conversationId].flat().find((o) => o.item === row.Item_Deleted);
+              const order = batch[conversationId]
+                .flat()
+                .find((o) => o.item === row.Item_Deleted);
               return order.id;
             });
 
@@ -708,18 +848,28 @@ async function processConversationBatch(batch) {
       await saveCache();
     } catch (error) {
       await transaction.rollback();
-      logger.error(`Lỗi cập nhật database: ${batchConversationIds.join(", ")}: ${error.message}`);
+      logger.error(
+        `Lỗi cập nhật database: ${batchConversationIds.join(", ")}: ${
+          error.message
+        }`
+      );
       throw error;
     }
     return result;
   } catch (error) {
-    logger.error(`Lỗi batch ${batchConversationIds.join(", ")}: ${error.message}`);
+    logger.error(
+      `Lỗi batch ${batchConversationIds.join(", ")}: ${error.message}`
+    );
     for (const [conversationId, groups] of Object.entries(batch)) {
       await processConversationGroup(conversationId, groups.flat());
     }
   } finally {
     const runTime = (Date.now() - startTime) / 1000;
-    logger.info(`Kết thúc batch ${batchConversationIds.join(", ")}. Thời gian: ${runTime} giây`);
+    logger.info(
+      `Kết thúc batch ${batchConversationIds.join(
+        ", "
+      )}. Thời gian: ${runTime} giây`
+    );
   }
 }
 
@@ -741,15 +891,23 @@ async function processConversationGroup(conversationId, orders) {
   groupsWithDuplicates.forEach((group, index) => {
     const groupKey = hashGroup(group);
     let cachedResult = memoryCache.get(groupKey);
-    const groupItems = group.map(o => o.item).join(", ");
+    const groupItems = group.map((o) => o.item).join(", ");
     if (cachedResult) {
       cacheHits++;
       cacheAccessCount.set(groupKey, (cacheAccessCount.get(groupKey) || 0) + 1);
-      logger.info(`Cache hit cho groupKey: ${groupKey}, conversation_id: ${conversationId}, group: ${index + 1}`);
-      logger.info(`Nhóm trùng với lần chạy trước, không gọi API: conversation_id: ${conversationId}, group: ${index + 1}, Items: [${groupItems}]`);
+      logger.info(
+        `Cache hit cho groupKey: ${groupKey}, conversation_id: ${conversationId}, group: ${
+          index + 1
+        }`
+      );
+      logger.info(
+        `Nhóm trùng với lần chạy trước, không gọi API: conversation_id: ${conversationId}, group: ${
+          index + 1
+        }, Items: [${groupItems}]`
+      );
       groupCacheHits[index] = cachedResult.uniqueItems;
     } else {
-      const newItems = group.map(o => o.item).sort();
+      const newItems = group.map((o) => o.item).sort();
       let foundSimilar = false;
       const cacheKeys = memoryCache.keys();
       for (const key of cacheKeys) {
@@ -758,8 +916,16 @@ async function processConversationGroup(conversationId, orders) {
           cacheHits++;
           cacheAccessCount.set(key, (cacheAccessCount.get(key) || 0) + 1);
           cachedResult = value.uniqueItems;
-          logger.info(`Cache hit cho nhóm tương đồng với key: ${key}, conversation_id: ${conversationId}, group: ${index + 1}`);
-          logger.info(`Nhóm tương đồng với lần chạy trước, không gọi API: conversation_id: ${conversationId}, group: ${index + 1}, Items: [${groupItems}]`);
+          logger.info(
+            `Cache hit cho nhóm tương đồng với key: ${key}, conversation_id: ${conversationId}, group: ${
+              index + 1
+            }`
+          );
+          logger.info(
+            `Nhóm tương đồng với lần chạy trước, không gọi API: conversation_id: ${conversationId}, group: ${
+              index + 1
+            }, Items: [${groupItems}]`
+          );
           groupCacheHits[index] = cachedResult;
           foundSimilar = true;
           break;
@@ -767,22 +933,34 @@ async function processConversationGroup(conversationId, orders) {
       }
       if (!foundSimilar) {
         cacheMisses++;
-        logger.info(`Cache miss cho groupKey: ${groupKey}, conversation_id: ${conversationId}, group: ${index + 1}`);
-        logger.info(`Nhóm có dữ liệu mới, cần gọi API: conversation_id: ${conversationId}, group: ${index + 1}, Items: [${groupItems}]`);
+        logger.info(
+          `Cache miss cho groupKey: ${groupKey}, conversation_id: ${conversationId}, group: ${
+            index + 1
+          }`
+        );
+        logger.info(
+          `Nhóm có dữ liệu mới, cần gọi API: conversation_id: ${conversationId}, group: ${
+            index + 1
+          }, Items: [${groupItems}]`
+        );
         groupsToProcess.push(group);
       }
     }
   });
 
   if (groupsToProcess.length === 0) {
-    logger.info(`Sử dụng cache hoàn toàn cho Conversation ID: ${conversationId}`);
-    const result = [{
-      conversation_id: parseInt(conversationId),
-      groups: groupsWithDuplicates.map((group, index) => ({
-        group: index + 1,
-        uniqueItems: groupCacheHits[index],
-      })),
-    }];
+    logger.info(
+      `Sử dụng cache hoàn toàn cho Conversation ID: ${conversationId}`
+    );
+    const result = [
+      {
+        conversation_id: parseInt(conversationId),
+        groups: groupsWithDuplicates.map((group, index) => ({
+          group: index + 1,
+          uniqueItems: groupCacheHits[index],
+        })),
+      },
+    ];
     const transaction = await sequelize.transaction();
     try {
       for (const convResult of result) {
@@ -823,8 +1001,15 @@ async function processConversationGroup(conversationId, orders) {
         if (tableData.length) {
           logger.info(`\nKết quả cho Conversation ID: ${conversationId}`);
           logger.info("-".repeat(120));
-          console.table(tableData, ["Conversation_ID", "Group", "Item_Deleted", "Item_Kept"]);
-          logger.info(`Đã xóa ${totalDeleted} bản ghi trùng lặp cho Conversation ID: ${conversationId}`);
+          console.table(tableData, [
+            "Conversation_ID",
+            "Group",
+            "Item_Deleted",
+            "Item_Kept",
+          ]);
+          logger.info(
+            `Đã xóa ${totalDeleted} bản ghi trùng lặp cho Conversation ID: ${conversationId}`
+          );
 
           const allIdsToDelete = tableData
             .filter((row) => row.Item_Deleted !== "Không có")
@@ -845,13 +1030,17 @@ async function processConversationGroup(conversationId, orders) {
       }
     } catch (error) {
       await transaction.rollback();
-      logger.error(`Lỗi cập nhật database: ${conversationId}: ${error.message}`);
+      logger.error(
+        `Lỗi cập nhật database: ${conversationId}: ${error.message}`
+      );
       throw error;
     }
     return;
   }
 
-  const ordersString = formatOrdersStringForBatch({ [conversationId]: groupsToProcess });
+  const ordersString = formatOrdersStringForBatch({
+    [conversationId]: groupsToProcess,
+  });
   if (!ordersString) {
     logger.info(`Không có dữ liệu mới: ${conversationId}`);
     return;
@@ -859,7 +1048,12 @@ async function processConversationGroup(conversationId, orders) {
 
   try {
     const content = await callOpenAIApi([conversationId], ordersString);
-    const result = parseJsonSafely(content, [conversationId], { [conversationId]: groupsToProcess }, { [conversationId]: groupCacheHits });
+    const result = parseJsonSafely(
+      content,
+      [conversationId],
+      { [conversationId]: groupsToProcess },
+      { [conversationId]: groupCacheHits }
+    );
 
     const transaction = await sequelize.transaction();
     try {
@@ -901,8 +1095,15 @@ async function processConversationGroup(conversationId, orders) {
         if (tableData.length) {
           logger.info(`\nKết quả cho Conversation ID: ${conversationId}`);
           logger.info("-".repeat(120));
-          console.table(tableData, ["Conversation_ID", "Group", "Item_Deleted", "Item_Kept"]);
-          logger.info(`Đã xóa ${totalDeleted} bản ghi trùng lặp cho Conversation ID: ${conversationId}`);
+          console.table(tableData, [
+            "Conversation_ID",
+            "Group",
+            "Item_Deleted",
+            "Item_Kept",
+          ]);
+          logger.info(
+            `Đã xóa ${totalDeleted} bản ghi trùng lặp cho Conversation ID: ${conversationId}`
+          );
 
           const allIdsToDelete = tableData
             .filter((row) => row.Item_Deleted !== "Không có")
@@ -923,14 +1124,20 @@ async function processConversationGroup(conversationId, orders) {
       }
     } catch (error) {
       await transaction.rollback();
-      logger.error(`Lỗi cập nhật database: ${conversationId}: ${error.message}`);
+      logger.error(
+        `Lỗi cập nhật database: ${conversationId}: ${error.message}`
+      );
       throw error;
     }
   } catch (error) {
-    logger.error(`Lỗi xử lý Conversation ID ${conversationId}: ${error.message}`);
+    logger.error(
+      `Lỗi xử lý Conversation ID ${conversationId}: ${error.message}`
+    );
   } finally {
     const runTime = (Date.now() - startTime) / 1000;
-    logger.info(`Kết thúc Conversation ID: ${conversationId}. Thời gian: ${runTime} giây`);
+    logger.info(
+      `Kết thúc Conversation ID: ${conversationId}. Thời gian: ${runTime} giây`
+    );
   }
 }
 
@@ -963,14 +1170,19 @@ async function main() {
       let batches = [];
 
       for (const [conversationId, orders] of Object.entries(ordersGrouped)) {
-        const groups = processLocalDuplicates(groupSimilarItems(orders)).filter((g) => g.length > 1);
+        const groups = processLocalDuplicates(groupSimilarItems(orders)).filter(
+          (g) => g.length > 1
+        );
         if (!groups.length) continue;
 
-        const batchString = formatOrdersStringForBatch({ [conversationId]: groups });
+        const batchString = formatOrdersStringForBatch({
+          [conversationId]: groups,
+        });
         const tokenCount = estimateTokens(batchString);
 
         if (
-          Object.keys(currentBatch).length >= CONFIG.MAX_CONVERSATION_IDS_PER_BATCH ||
+          Object.keys(currentBatch).length >=
+            CONFIG.MAX_CONVERSATION_IDS_PER_BATCH ||
           currentTokenCount + tokenCount > CONFIG.MAX_TOKEN_PER_BATCH
         ) {
           batches.push(currentBatch);
@@ -1008,8 +1220,14 @@ async function main() {
     await saveCache();
     const runTime = (Date.now() - startTime) / 1000;
     const cacheHitRate = cacheHits / (cacheHits + cacheMisses) || 0;
-    logger.info(`Chương trình kết thúc. Tổng thời gian: ${runTime} giây, Tổng token đã tiêu hao: ${totalTokensUsed}`);
-    logger.info(`Cache hit: ${cacheHits}, Cache miss: ${cacheMisses}, Tỷ lệ cache hit: ${(cacheHitRate * 100).toFixed(2)}%`);
+    logger.info(
+      `Chương trình kết thúc. Tổng thời gian: ${runTime} giây, Tổng token đã tiêu hao: ${totalTokensUsed}`
+    );
+    logger.info(
+      `Cache hit: ${cacheHits}, Cache miss: ${cacheMisses}, Tỷ lệ cache hit: ${(
+        cacheHitRate * 100
+      ).toFixed(2)}%`
+    );
   }
 }
 

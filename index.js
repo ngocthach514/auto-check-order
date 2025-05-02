@@ -181,8 +181,9 @@ function hashGroup(group) {
   return crypto.createHash("md5").update(items.toLowerCase()).digest("hex");
 }
 
-// Trích xuất từ khóa
+// Trích xuất từ khóa (phiên bản cải tiến cho công nghệ)
 function extractKeyWords(item) {
+  // Danh sách từ thông dụng (stop words) cho công nghệ
   const commonWords = [
     "and",
     "for",
@@ -192,13 +193,94 @@ function extractKeyWords(item) {
     "oei",
     "dsp",
     "intl",
+    "the",
+    "in",
+    "on",
+    "at",
+    "to",
+    "of",
+    "a",
+    "an",
+    "is",
+    "are",
+    "version",
+    "edition",
+    "pack",
+    "license",
+    "software",
+    "hardware",
+    "eng",
+    "english",
+    "intl",
+    "international",
+    "pkg",
+    "package",
+    "oem",
+    "retail",
+    "single",
+    "multi",
+    "user",
+    "device",
+    "gen",
+    "generation",
+    "core",
+    "series",
+    "model",
   ];
-  return item
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, "")
+
+  // Từ khóa ưu tiên cao (trọng số lớn hơn)
+  const highPriorityWords = [
+    "windows",
+    "pro",
+    "home",
+    "enterprise",
+    "hp",
+    "dell",
+    "lenovo",
+    "asus",
+    "intel",
+    "amd",
+    "core",
+    "ryzen",
+    "i3",
+    "i5",
+    "i7",
+    "i9",
+    "mfp",
+    "laserjet",
+    "officejet",
+    "deskjet",
+    "printer",
+    "optiplex",
+    "latitude",
+    "inspiron",
+    "xps",
+    "alienware",
+  ];
+
+  // Giữ lại chữ, số, khoảng trắng, dấu gạch ngang và dấu chấm
+  const cleanedItem = item.toLowerCase().replace(/[^a-z0-9\s.-]/g, "");
+
+  // Tách chuỗi và lọc từ khóa
+  const words = cleanedItem
     .split(/\s+/)
-    .filter((word) => word.length > 2 && !commonWords.includes(word))
-    .map((word) => word.trim());
+    .filter((word) => word.length > 1 && !commonWords.includes(word))
+    .map((word) => ({
+      text: word.trim(),
+      weight: highPriorityWords.includes(word) ? 2 : 1,
+    }));
+
+  // Loại bỏ từ khóa trùng lặp, ưu tiên trọng số cao hơn
+  const uniqueWords = [];
+  const seenWords = new Set();
+  for (const word of words) {
+    if (!seenWords.has(word.text)) {
+      uniqueWords.push(word);
+      seenWords.add(word.text);
+    }
+  }
+
+  return uniqueWords;
 }
 
 // Kiểm tra độ tương đồng
